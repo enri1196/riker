@@ -65,14 +65,15 @@ impl Actor for SelectTest {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let sys = ActorSystem::new().unwrap();
 
     let actor = sys.actor_of::<SelectTest>("select-actor").unwrap();
 
     actor.tell("msg for select-actor", None);
 
-    std::thread::sleep(Duration::from_millis(500));
+    tokio::time::sleep(Duration::from_millis(500)).await;
 
     sys.print_tree();
 }

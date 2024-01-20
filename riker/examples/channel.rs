@@ -73,7 +73,8 @@ impl Receive<PowerStatus> for NavigationActor {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let sys = ActorSystem::new().unwrap();
     let chan: ChannelRef<PowerStatus> = channel("power-status", &sys).unwrap();
 
@@ -82,7 +83,7 @@ fn main() {
     sys.actor_of_args::<NavigationActor, _>("navigation-actor", chan.clone())
         .unwrap();
 
-    std::thread::sleep(Duration::from_millis(500));
+    tokio::time::sleep(Duration::from_millis(500)).await;
     // sys.print_tree();
     let topic = Topic::from("my-topic");
     println!(
@@ -97,6 +98,6 @@ fn main() {
         None,
     );
     // sleep another half seconds to process messages
-    std::thread::sleep(Duration::from_millis(500));
+    tokio::time::sleep(Duration::from_millis(500)).await;
     sys.print_tree();
 }

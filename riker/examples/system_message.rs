@@ -59,13 +59,14 @@ impl Actor for MyActor {
 }
 
 // start the system and create an actor
-fn main() {
+#[tokio::main]
+async fn main() {
     let sys = ActorSystem::new().unwrap();
 
     println!("Starting actor my-actor");
     let _my_actor = sys.actor_of::<MyActor>("my-actor").unwrap();
 
-    std::thread::sleep(Duration::from_millis(500));
+    tokio::time::sleep(Duration::from_millis(500)).await;
     sys.print_tree();
 
     let _ = match sys.select("/user/my-actor").ok() {
@@ -81,6 +82,6 @@ fn main() {
         )
     });
     println!("Actor my-actor should be gone");
-    std::thread::sleep(Duration::from_millis(500));
+    tokio::time::sleep(Duration::from_millis(500)).await;
     sys.print_tree();
 }

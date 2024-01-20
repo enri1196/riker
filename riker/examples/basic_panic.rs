@@ -43,7 +43,8 @@ impl Receive<Panic> for PanicActor {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let sys = SystemBuilder::new().name("my-app").create().unwrap();
 
     let sup = sys.actor_of::<PanicActor>("panic_actor").unwrap();
@@ -51,11 +52,11 @@ fn main() {
     // sys.print_tree();
 
     println!("Before panic we see supervisor and actor that will panic!");
-    std::thread::sleep(Duration::from_millis(500));
+    tokio::time::sleep(Duration::from_millis(500)).await;
     sys.print_tree();
 
     sup.tell(Panic, None);
-    std::thread::sleep(Duration::from_millis(500));
+    tokio::time::sleep(Duration::from_millis(500)).await;
     println!("We should see panic printed, but we still alive and panic actor gone!");
     sys.print_tree();
 }

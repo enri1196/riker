@@ -72,7 +72,8 @@ impl Receive<Panic> for RestartSup {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let sys = ActorSystem::new().unwrap();
 
     let sup = sys.actor_of::<RestartSup>("supervisor").unwrap();
@@ -80,11 +81,11 @@ fn main() {
     // sys.print_tree();
 
     println!("Before panic we see supervisor and actor that will panic!");
-    std::thread::sleep(Duration::from_millis(500));
+    tokio::time::sleep(Duration::from_millis(500)).await;
     sys.print_tree();
 
     sup.tell(Panic, None);
-    std::thread::sleep(Duration::from_millis(500));
+    tokio::time::sleep(Duration::from_millis(500)).await;
     println!("We should see panic printed, but we still alive and panic actor gone!");
     sys.print_tree();
 }
