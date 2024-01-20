@@ -437,8 +437,8 @@ fn post_stop<A: Actor>(actor: &mut Option<A>) {
 /// Since `Context` is specific to an actor and its functions
 /// it is not cloneable.
 pub struct Context<Msg: Message> {
-    pub myself: ActorRef<Msg>,
-    pub system: ActorSystem,
+    myself: ActorRef<Msg>,
+    system: ActorSystem,
     pub(crate) kernel: KernelRef,
 }
 
@@ -446,9 +446,21 @@ impl<Msg> Context<Msg>
 where
     Msg: Message,
 {
+    pub fn new(myself: ActorRef<Msg>, system: ActorSystem, kernel: KernelRef) -> Self {
+        Self {
+            myself,
+            system,
+            kernel,
+        }
+    }
+
     /// Returns the `ActorRef` of the current actor.
     pub fn myself(&self) -> ActorRef<Msg> {
         self.myself.clone()
+    }
+
+    pub fn system(&self) -> ActorSystem {
+        self.system.clone()
     }
 }
 
