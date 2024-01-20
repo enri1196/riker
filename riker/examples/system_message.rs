@@ -45,9 +45,6 @@ impl Actor for MyActor {
     fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
         match msg {
             Command::KillChild(path) => {
-                ctx.myself()
-                    .children()
-                    .for_each(|b| println!("{}", b.path()));
                 ctx.select_ref(path.as_str()).map(|b_act| ctx.stop(&b_act));
             }
             Command::Other(inner_msg) => {
@@ -69,13 +66,13 @@ async fn main() {
     tokio::time::sleep(Duration::from_millis(500)).await;
     sys.print_tree();
 
-    let _ = match sys.select("/user/my-actor").ok() {
+    let _ = match sys.select_ref("/user/my-actor") {
         Some(b_act) => b_act.try_tell(Command::Other("CiaoCiao".to_string()), None),
         None => panic!("No actor found in path /user/my-actor"),
     };
 
     println!("Killing actor my-actor");
-    let _select = sys.select("/user/my-actor").map(|b_act| {
+    let _select = sys.select_ref("/user/my-actor").map(|b_act| {
         b_act.try_tell(
             Command::KillChild("/user/my-actor/my-child".to_string()),
             None,
