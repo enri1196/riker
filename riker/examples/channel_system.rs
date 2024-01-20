@@ -37,12 +37,12 @@ impl Actor for SystemActor {
 
         println!(
             "{}: pre_start subscribe to topic {:?}",
-            ctx.myself.name(),
+            ctx.myself().name(),
             topic
         );
         let sub = Box::new(ctx.myself());
 
-        ctx.system.sys_events().tell(
+        ctx.system().sys_events().tell(
             Subscribe {
                 actor: sub,
                 topic: "*".into(),
@@ -64,7 +64,7 @@ impl Actor for SystemActor {
 
 impl Receive<SystemEvent> for SystemActor {
     fn receive(&mut self, ctx: &Context<Self::Msg>, msg: SystemEvent, _sender: Sender) {
-        print!("{}: -> got system msg: {:?} ", ctx.myself.name(), msg);
+        print!("{}: -> got system msg: {:?} ", ctx.myself().name(), msg);
         match msg {
             SystemEvent::ActorCreated(created) => {
                 println!("path: {}", created.actor.path());

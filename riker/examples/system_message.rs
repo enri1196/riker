@@ -16,7 +16,7 @@ impl Actor for Child {
     fn sys_recv(&mut self, ctx: &Context<Self::Msg>, msg: SystemMsg, _sender: Sender) {
         if let SystemMsg::Command(cmd) = msg {
             match cmd {
-                SystemCmd::Stop => ctx.system.stop(ctx.myself()),
+                SystemCmd::Stop => ctx.system().stop(ctx.myself()),
                 SystemCmd::Restart => {}
             }
         }

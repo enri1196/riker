@@ -20,7 +20,7 @@ impl Actor for DumbActor {
 
 impl Receive<SomeMessage> for DumbActor {
     fn receive(&mut self, ctx: &Context<Self::Msg>, msg: SomeMessage, _sender: Sender) {
-        println!("{}: -> got msg: {:?} ", ctx.myself.name(), msg);
+        println!("{}: -> got msg: {:?} ", ctx.myself().name(), msg);
     }
 }
 
@@ -37,12 +37,12 @@ impl Actor for DeadLetterActor {
 
         println!(
             "{}: pre_start subscribe to topic {:?}",
-            ctx.myself.name(),
+            ctx.myself().name(),
             topic
         );
         let sub = Box::new(ctx.myself());
 
-        ctx.system
+        ctx.system()
             .dead_letters()
             .tell(Subscribe { actor: sub, topic }, None);
     }
@@ -54,7 +54,7 @@ impl Actor for DeadLetterActor {
 
 impl Receive<DeadLetter> for DeadLetterActor {
     fn receive(&mut self, ctx: &Context<Self::Msg>, msg: DeadLetter, _sender: Sender) {
-        println!("{}: -> got msg: {:?} ", ctx.myself.name(), msg);
+        println!("{}: -> got msg: {:?} ", ctx.myself().name(), msg);
     }
 }
 
