@@ -8,14 +8,16 @@ use std::{error::Error, pin::Pin, sync::Arc};
 
 pub type ExecutorHandle = Arc<dyn TaskExecutor>;
 
+pub type TaskError = Box<dyn Error + Send + 'static>;
+
 pub trait Task: Future<Output = ()> + Send {}
 impl<T: Future<Output = ()> + Send> Task for T {}
 
 pub trait TaskExecutor {
-    fn spawn(&self, future: Pin<Box<dyn Task>>) -> Result<Box<dyn TaskExec<()>>, Box<dyn Error>>;
+    fn spawn(&self, future: Pin<Box<dyn Task>>) -> Result<Box<dyn TaskExec<()>>, TaskError>;
 }
 pub trait TaskExec<T: Send>:
-    Future<Output = Result<T, Box<dyn Error>>> + Unpin + Send + Sync
+    Future<Output = Result<T, TaskError>> + Unpin + Send + Sync
 {
     fn abort(self: Box<Self>);
     fn forget(self: Box<Self>);
@@ -30,12 +32,12 @@ impl<T: Send> TaskHandle<T> {
     }
 }
 impl<T: Send> Future for TaskHandle<T> {
-    type Output = Result<T, Box<dyn Error>>;
+    type Output = Result<T, TaskError>;
     fn poll(mut self: Pin<&mut Self>, cx: &mut PollContext<'_>) -> Poll<Self::Output> {
         if Pin::new(&mut *self.handle).poll(cx).is_ready() {
             if let Poll::Ready(val) = <Receiver<T> as Future>::poll(Pin::new(&mut self.recv), cx) {
                 self.recv.close();
-                return Poll::Ready(val.map_err(|e| Box::new(e) as Box<dyn Error + 'static>));
+                return Poll::Ready(val.map_err(|e| Box::new(e) as Box<dyn Error + Send + 'static>));
             }
         }
         Poll::Pending
@@ -69,16 +71,16 @@ mod executor_impl {
         fn spawn(
             &self,
             future: Pin<Box<dyn Task>>,
-        ) -> Result<Box<dyn TaskExec<()>>, Box<dyn Error>> {
+        ) -> Result<Box<dyn TaskExec<()>>, TaskError> {
             Ok(Box::new(TokioJoinHandle(self.0.spawn(future))))
         }
     }
     struct TokioJoinHandle(tokio::task::JoinHandle<()>);
     impl Future for TokioJoinHandle {
-        type Output = Result<(), Box<dyn Error>>;
+        type Output = Result<(), TaskError>;
         fn poll(mut self: Pin<&mut Self>, cx: &mut PollContext<'_>) -> Poll<Self::Output> {
             Future::poll(Pin::new(&mut self.0), cx)
-                .map_err(|e| Box::new(e) as Box<dyn Error + 'static>)
+                .map_err(|e| Box::new(e) as Box<dyn Error + Send + 'static>)
         }
     }
     impl TaskExec<()> for TokioJoinHandle {

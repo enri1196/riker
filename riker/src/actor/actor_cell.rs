@@ -15,7 +15,7 @@ use uuid::Uuid;
 
 use crate::{
     actor::{props::ActorFactory, *},
-    executor::TaskHandle,
+    executor::{TaskError, TaskHandle},
     kernel::{
         kernel_ref::{dispatch, dispatch_any, KernelRef},
         mailbox::{AnyEnqueueError, AnySender, MailboxSender},
@@ -549,7 +549,7 @@ where
     fn run<Fut>(
         &self,
         future: Fut,
-    ) -> Result<TaskHandle<<Fut as Future>::Output>, Box<dyn std::error::Error>>
+    ) -> Result<TaskHandle<<Fut as Future>::Output>, TaskError>
     where
         Fut: Future + Send + 'static,
         <Fut as Future>::Output: Send,

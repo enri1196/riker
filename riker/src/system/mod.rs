@@ -5,9 +5,9 @@ pub(crate) mod timer;
 use serde_json::{json, Value};
 use tracing::debug;
 
-use std::{error::Error, fmt};
+use std::fmt;
 
-use crate::{actor::BasicActorRef, actors::selection::RefSelectionFactory, executor::{get_executor_handle, ExecutorHandle, TaskHandle}};
+use crate::{actor::BasicActorRef, actors::selection::RefSelectionFactory, executor::{get_executor_handle, ExecutorHandle, TaskError, TaskHandle}};
 
 // Public riker::system API (plus the pub data types in this file)
 pub use self::timer::{BasicTimer, ScheduleId, Timer};
@@ -679,14 +679,14 @@ impl RefSelectionFactory for ActorSystem {
 // futures::task::Spawn::spawn requires &mut self so
 // we'll create a wrapper trait that requires only &self.
 pub trait Run {
-    fn run<Fut>(&self, future: Fut) -> Result<TaskHandle<<Fut as Future>::Output>, Box<dyn Error>>
+    fn run<Fut>(&self, future: Fut) -> Result<TaskHandle<<Fut as Future>::Output>, TaskError>
     where
         Fut: Future + Send + 'static,
         <Fut as Future>::Output: Send;
 }
 
 impl Run for ActorSystem {
-    fn run<Fut>(&self, future: Fut) -> Result<TaskHandle<<Fut as Future>::Output>, Box<dyn Error>>
+    fn run<Fut>(&self, future: Fut) -> Result<TaskHandle<<Fut as Future>::Output>, TaskError>
     where
         Fut: Future + Send + 'static,
         <Fut as Future>::Output: Send,
