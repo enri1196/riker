@@ -13,7 +13,7 @@ impl Actor for NewActor {
 
     fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
         self.receive(ctx, msg, sender);
-        ctx.stop(&ctx.myself);
+        ctx.stop(&ctx.myself());
     }
 }
 
@@ -51,8 +51,8 @@ struct GenericActor<A: Send + 'static, B>
 where
     B: Send + 'static,
 {
-    a: A,
-    b: B,
+    _a: A,
+    _b: B,
 }
 
 impl<A: Send + 'static, B: Send + 'static> Actor for GenericActor<A, B> {
@@ -64,7 +64,7 @@ impl<A: Send + 'static, B: Send + 'static> Actor for GenericActor<A, B> {
 
     fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
         self.receive(ctx, msg, sender);
-        ctx.stop(&ctx.myself);
+        ctx.stop(&ctx.myself());
     }
 }
 
@@ -108,7 +108,7 @@ impl Actor for GenericMsgActor {
 
     fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
         self.receive(ctx, msg, sender);
-        ctx.stop(&ctx.myself);
+        ctx.stop(&ctx.myself());
     }
 }
 
@@ -164,7 +164,7 @@ impl Actor for PathMsgActor {
 
     fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
         self.receive(ctx, msg, sender);
-        ctx.stop(&ctx.myself);
+        ctx.stop(&ctx.myself());
     }
 }
 

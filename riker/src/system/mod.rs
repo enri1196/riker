@@ -700,7 +700,7 @@ impl Run for ActorSystem {
         Fut: Future + Send + 'static,
         Fut::Output: Send,
     {
-        let (sender, recv) = tokio::sync::oneshot::channel::<Fut::Output>();
+        let (sender, recv) = oneshot::channel::<Fut::Output>();
         let handle = self.exec.spawn(Box::pin(
             async move {
                 drop(sender.send(future.await));
@@ -925,9 +925,9 @@ impl Actor for ShutdownActor {
     fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         let sub = Subscribe {
             topic: SysTopic::ActorTerminated.into(),
-            actor: Box::new(ctx.myself.clone()),
+            actor: Box::new(ctx.myself()),
         };
-        ctx.system.sys_events().tell(sub, None);
+        ctx.system().sys_events().tell(sub, None);
 
         // todo this is prone to failing since there is no
         // confirmation that ShutdownActor has subscribed to
@@ -937,7 +937,7 @@ impl Actor for ShutdownActor {
 
         // tokio::time::sleep_ms(1000);
         // send stop to all /user children
-        ctx.system.stop(ctx.system.user_root());
+        ctx.system().stop(ctx.system().user_root());
     }
 
     fn sys_recv(
@@ -963,7 +963,7 @@ impl Receive<ActorTerminated> for ShutdownActor {
         msg: ActorTerminated,
         _sender: Option<BasicActorRef>,
     ) {
-        if &msg.actor == ctx.system.user_root() {
+        if &msg.actor == ctx.system().user_root() {
             if let Ok(ref mut tx) = self.tx.lock() {
                 if let Some(tx) = tx.take() {
                     tx.send(()).unwrap();

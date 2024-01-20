@@ -64,7 +64,7 @@ pub mod channel {
         type Pay = P;
 
         fn event(&self, evt: T) {
-            let tx = self.clone().tx.clone();
+            let tx = self.tx.clone();
             tokio::spawn(async move {
                 tx.send(evt).await.unwrap();
             });

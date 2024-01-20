@@ -193,7 +193,7 @@ impl Actor for EventSubscriber {
     fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         // subscribe
         let sub = Box::new(ctx.myself());
-        ctx.system.sys_events().tell(
+        ctx.system().sys_events().tell(
             Subscribe {
                 actor: sub,
                 topic: "*".into(),
@@ -284,7 +284,7 @@ impl Actor for DeadLetterSub {
     fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         // subscribe to dead_letters
         let sub = Box::new(ctx.myself());
-        ctx.system.dead_letters().tell(
+        ctx.system().dead_letters().tell(
             Subscribe {
                 actor: sub,
                 topic: "*".into(),

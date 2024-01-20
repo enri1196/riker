@@ -221,7 +221,7 @@ where
 
     let has_msgs = sen.mbox.has_msgs() || sen.mbox.has_sys_msgs();
     if has_msgs && !sen.mbox.is_scheduled() {
-        ctx.kernel.schedule(&ctx.system);
+        ctx.kernel.schedule(&ctx.system());
     }
 }
 
@@ -294,7 +294,7 @@ fn handle_init<A>(
     mbox.set_suspended(false);
 
     if cell.is_user() {
-        ctx.system.publish_event(
+        ctx.system().publish_event(
             ActorCreated {
                 actor: cell.myself().into(),
             }

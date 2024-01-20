@@ -74,11 +74,11 @@ where
         while let Some(msg) = rx.next().await {
             match msg {
                 KernelMsg::RunActor => {
-                    let ctx = Context {
-                        myself: actor_ref.clone(),
-                        system: asys.clone(),
-                        kernel: akr.clone(),
-                    };
+                    let ctx = Context::new(
+                        actor_ref.clone(),
+                        asys.clone(),
+                        akr.clone(),
+                    );
 
                     let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
                         run_mailbox(&mailbox, ctx, &mut dock)
