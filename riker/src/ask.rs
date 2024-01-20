@@ -2,8 +2,8 @@
 
 use std::sync::{Arc, Mutex};
 
-use tokio::sync::oneshot::{channel, Sender as ChannelSender};
 use futures::FutureExt;
+use tokio::sync::oneshot::{channel, Sender as ChannelSender};
 
 use crate::actors::*;
 use crate::executor::TaskHandle;

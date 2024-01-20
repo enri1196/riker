@@ -197,7 +197,7 @@ fn supervision_escalate_failed_actor() {
     sup.tell(Panic, None);
 
     let (probe, mut listen) = probe::<()>();
-    std::thread::sleep(std::time::Duration::from_millis(2000));
+    tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
     sup.tell(TestProbe(probe), None);
     p_assert_eq!(listen, ());
     sys.print_tree();

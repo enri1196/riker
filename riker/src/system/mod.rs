@@ -7,7 +7,11 @@ use tracing::debug;
 
 use std::fmt;
 
-use crate::{actor::BasicActorRef, actors::selection::RefSelectionFactory, executor::{get_executor_handle, ExecutorHandle, TaskError, TaskHandle}};
+use crate::{
+    actor::BasicActorRef,
+    actors::selection::RefSelectionFactory,
+    executor::{get_executor_handle, ExecutorHandle, TaskError, TaskExecutor, TaskHandle},
+};
 
 // Public riker::system API (plus the pub data types in this file)
 pub use self::timer::{BasicTimer, ScheduleId, Timer};
@@ -239,6 +243,15 @@ impl ActorSystem {
         ActorSystem::create("riker", exec, cfg)
     }
 
+    /// Create a new `ActorSystem` instance with provided executor
+    ///
+    /// Requires a type that implements the `TaskExecutor` trait.
+    pub fn with_executor(exec: impl TaskExecutor + 'static) -> Result<ActorSystem, SystemError> {
+        let cfg = load_config();
+
+        ActorSystem::create("riker", Arc::new(exec), cfg)
+    }
+
     /// Create a new `ActorSystem` instance with provided name
     ///
     /// Requires a type that implements the `Model` trait.
@@ -256,11 +269,7 @@ impl ActorSystem {
         ActorSystem::create(name, exec, cfg)
     }
 
-    fn create(
-        name: &str,
-        exec: ExecutorHandle,
-        cfg: Config,
-    ) -> Result<ActorSystem, SystemError> {
+    fn create(name: &str, exec: ExecutorHandle, cfg: Config) -> Result<ActorSystem, SystemError> {
         validate_name(name).map_err(|_| SystemError::InvalidName(name.into()))?;
         // Until the logger has started, use println
         debug!("Starting actor system: System[{}]", name);
@@ -679,17 +688,17 @@ impl RefSelectionFactory for ActorSystem {
 // futures::task::Spawn::spawn requires &mut self so
 // we'll create a wrapper trait that requires only &self.
 pub trait Run {
-    fn run<Fut>(&self, future: Fut) -> Result<TaskHandle<<Fut as Future>::Output>, TaskError>
+    fn run<Fut>(&self, future: Fut) -> Result<TaskHandle<Fut::Output>, TaskError>
     where
         Fut: Future + Send + 'static,
-        <Fut as Future>::Output: Send;
+        Fut::Output: Send;
 }
 
 impl Run for ActorSystem {
-    fn run<Fut>(&self, future: Fut) -> Result<TaskHandle<<Fut as Future>::Output>, TaskError>
+    fn run<Fut>(&self, future: Fut) -> Result<TaskHandle<Fut::Output>, TaskError>
     where
         Fut: Future + Send + 'static,
-        <Fut as Future>::Output: Send,
+        Fut::Output: Send,
     {
         let (sender, recv) = tokio::sync::oneshot::channel::<Fut::Output>();
         let handle = self.exec.spawn(Box::pin(
@@ -926,7 +935,7 @@ impl Actor for ShutdownActor {
         // It may be that the user root actor is Sterminated
         // before the subscription is complete.
 
-        // std::thread::sleep_ms(1000);
+        // tokio::time::sleep_ms(1000);
         // send stop to all /user children
         ctx.system.stop(ctx.system.user_root());
     }

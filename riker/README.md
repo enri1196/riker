@@ -64,7 +64,7 @@ fn main() {
 
     my_actor.tell("Hello my actor!".to_string(), None);
 
-    std::thread::sleep(Duration::from_millis(500));
+    tokio::time::sleep(Duration::from_millis(500));
 }
 ```
 

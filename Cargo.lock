@@ -733,6 +733,7 @@ dependencies = [
  "quote",
  "riker",
  "syn 1.0.109",
+ "tokio",
 ]
 
 [[package]]

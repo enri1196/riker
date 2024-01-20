@@ -3,10 +3,14 @@ use std::sync::Arc;
 use futures::{channel::mpsc::Sender, SinkExt};
 
 use crate::{
-    actor::{MsgError, MsgResult}, actors::Run, kernel::{
+    actor::{MsgError, MsgResult},
+    actors::Run,
+    kernel::{
         mailbox::{AnyEnqueueError, AnySender, MailboxSchedule, MailboxSender},
         KernelMsg,
-    }, system::ActorSystem, AnyMessage, Envelope, Message
+    },
+    system::ActorSystem,
+    AnyMessage, Envelope, Message,
 };
 
 #[derive(Clone)]

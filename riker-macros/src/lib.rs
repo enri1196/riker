@@ -145,10 +145,13 @@ fn impl_into(name: &Ident, vname: &Ident, ty: &TypePath) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn test(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn test(
+    _args: proc_macro::TokenStream,
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
     let input = proc_macro2::TokenStream::from(input);
-    let attr = quote!{#[tokio::test]};
-    let qual = quote!{async};
+    let attr = quote! {#[tokio::test]};
+    let qual = quote! {async};
     proc_macro::TokenStream::from(quote! {
         #attr
         #qual #input

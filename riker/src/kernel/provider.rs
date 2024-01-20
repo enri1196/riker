@@ -133,8 +133,7 @@ fn root(sys: &ActorSystem) -> BasicActorRef {
     let bigbang = BasicActorRef::new(bb_cell);
 
     // root
-    let props: BoxActorProd<Guardian> =
-        Props::new_args::<Guardian, _>("root".to_string());
+    let props: BoxActorProd<Guardian> = Props::new_args::<Guardian, _>("root".to_string());
     let (sender, sys_sender, mb) = mailbox::<SystemMsg>(100);
 
     let cell = ExtendedCell::new(
@@ -161,8 +160,7 @@ fn guardian(name: &str, path: &str, root: &BasicActorRef, sys: &ActorSystem) -> 
         host: Arc::from("localhost"),
     };
 
-    let props: BoxActorProd<Guardian> =
-        Props::new_args::<Guardian, _>(name.to_string());
+    let props: BoxActorProd<Guardian> = Props::new_args::<Guardian, _>(name.to_string());
     let (sender, sys_sender, mb) = mailbox::<SystemMsg>(100);
 
     let cell = ExtendedCell::new(

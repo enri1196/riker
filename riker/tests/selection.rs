@@ -65,7 +65,7 @@ fn select_child_of_child() {
 
     // delay to allow 'select-actor' pre_start to create 'child_a' and 'child_b'
     // Direct messaging on the actor_ref doesn't have this same issue
-    std::thread::sleep(std::time::Duration::from_millis(500));
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
     let (probe, mut listen) = probe();
 
@@ -85,7 +85,7 @@ fn select_all_children_of_child() {
 
     // delay to allow 'select-actor' pre_start to create 'child_a' and 'child_b'
     // Direct messaging on the actor_ref doesn't have this same issue
-    std::thread::sleep(std::time::Duration::from_millis(500));
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
     let (probe, mut listen) = probe();
 

@@ -1,10 +1,10 @@
 use config::Config;
-use tokio::sync::oneshot::Receiver;
 use futures::{
     task::{Context as PollContext, Poll},
     Future,
 };
 use std::{error::Error, pin::Pin, sync::Arc};
+use tokio::sync::oneshot::Receiver;
 
 pub type ExecutorHandle = Arc<dyn TaskExecutor>;
 
@@ -16,9 +16,7 @@ impl<T: Future<Output = ()> + Send> Task for T {}
 pub trait TaskExecutor {
     fn spawn(&self, future: Pin<Box<dyn Task>>) -> Result<Box<dyn TaskExec<()>>, TaskError>;
 }
-pub trait TaskExec<T: Send>:
-    Future<Output = Result<T, TaskError>> + Unpin + Send + Sync
-{
+pub trait TaskExec<T: Send>: Future<Output = Result<T, TaskError>> + Unpin + Send + Sync {
     fn abort(self: Box<Self>);
     fn forget(self: Box<Self>);
 }
@@ -37,7 +35,9 @@ impl<T: Send> Future for TaskHandle<T> {
         if Pin::new(&mut *self.handle).poll(cx).is_ready() {
             if let Poll::Ready(val) = <Receiver<T> as Future>::poll(Pin::new(&mut self.recv), cx) {
                 self.recv.close();
-                return Poll::Ready(val.map_err(|e| Box::new(e) as Box<dyn Error + Send + 'static>));
+                return Poll::Ready(
+                    val.map_err(|e| Box::new(e) as Box<dyn Error + Send + 'static>),
+                );
             }
         }
         Poll::Pending
@@ -68,10 +68,7 @@ mod executor_impl {
     use super::*;
     pub struct TokioExecutor(pub tokio::runtime::Handle);
     impl TaskExecutor for TokioExecutor {
-        fn spawn(
-            &self,
-            future: Pin<Box<dyn Task>>,
-        ) -> Result<Box<dyn TaskExec<()>>, TaskError> {
+        fn spawn(&self, future: Pin<Box<dyn Task>>) -> Result<Box<dyn TaskExec<()>>, TaskError> {
             Ok(Box::new(TokioJoinHandle(self.0.spawn(future))))
         }
     }

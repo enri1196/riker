@@ -14,6 +14,7 @@ keywords = ["actors", "actor-model", "async", "cqrs", "event_sourcing"]
 proc-macro = true
 
 [dependencies]
+tokio = { version = "1.35.1", features = ["full"] }
 syn = { version ="1.0", features = ["parsing", "full", "extra-traits", "proc-macro"] }
 quote = "1.0"
 proc-macro2 = "1.0"

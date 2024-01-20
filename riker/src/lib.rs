@@ -27,10 +27,14 @@ pub fn load_config() -> Config {
     let app_conf_path = env::var("APP_CONF").unwrap_or_else(|_| "config/app".into());
 
     Config::builder()
-        .set_default("mailbox.msg_process_limit", 1000).unwrap()
-        .set_default("dispatcher.pool_size", (num_cpus::get() * 2) as i64).unwrap()
-        .set_default("dispatcher.stack_size", 0).unwrap()
-        .set_default("scheduler.frequency_millis", 50).unwrap()
+        .set_default("mailbox.msg_process_limit", 1000)
+        .unwrap()
+        .set_default("dispatcher.pool_size", (num_cpus::get() * 2) as i64)
+        .unwrap()
+        .set_default("dispatcher.stack_size", 0)
+        .unwrap()
+        .set_default("scheduler.frequency_millis", 50)
+        .unwrap()
         // load the system config
         // riker.toml contains settings for anything related to the actor framework and its modules
         .add_source(File::with_name(&riker_conf_path).required(false))

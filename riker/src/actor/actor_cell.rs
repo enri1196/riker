@@ -546,13 +546,10 @@ impl<Msg> Run for Context<Msg>
 where
     Msg: Message,
 {
-    fn run<Fut>(
-        &self,
-        future: Fut,
-    ) -> Result<TaskHandle<<Fut as Future>::Output>, TaskError>
+    fn run<Fut>(&self, future: Fut) -> Result<TaskHandle<Fut::Output>, TaskError>
     where
         Fut: Future + Send + 'static,
-        <Fut as Future>::Output: Send,
+        Fut::Output: Send,
     {
         self.system.run(future)
     }

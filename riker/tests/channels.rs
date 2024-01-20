@@ -326,7 +326,7 @@ fn channel_dead_letters() {
 
     // immediately stop the actor and attempt to send a message
     sys.stop(&dumb);
-    std::thread::sleep(std::time::Duration::from_secs(1));
+    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     dumb.tell(SomeMessage, None);
 
     p_assert_eq!(listen, ());
