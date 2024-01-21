@@ -685,8 +685,6 @@ impl RefSelectionFactory for ActorSystem {
     }
 }
 
-// futures::task::Spawn::spawn requires &mut self so
-// we'll create a wrapper trait that requires only &self.
 pub trait Run {
     fn run<Fut>(&self, future: Fut) -> Result<TaskHandle<Fut::Output>, TaskError>
     where

@@ -18,7 +18,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use futures::{channel::mpsc::channel, StreamExt};
+use tokio::sync::mpsc::channel;
 use tracing::warn;
 
 use crate::{
@@ -71,7 +71,7 @@ where
     let actor_ref = ActorRef::new(cell);
 
     let f = async move {
-        while let Some(msg) = rx.next().await {
+        while let Some(msg) = rx.recv().await {
             match msg {
                 KernelMsg::RunActor => {
                     let ctx = Context::new(

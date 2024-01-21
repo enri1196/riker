@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use futures::{channel::mpsc::Sender, SinkExt};
+use tokio::sync::mpsc::Sender;
 
 use crate::{
     actor::{MsgError, MsgResult},
@@ -36,7 +36,7 @@ impl KernelRef {
     }
 
     fn send(&self, msg: KernelMsg, sys: &ActorSystem) {
-        let mut tx = self.tx.clone();
+        let tx = self.tx.clone();
         sys.run(async move {
             drop(tx.send(msg).await);
         })
