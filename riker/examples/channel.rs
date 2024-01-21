@@ -24,7 +24,11 @@ impl Actor for GpsActor {
     fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         let topic = Topic::from("my-topic");
 
-        println!("{}: pre_start subscribe to {:?}", ctx.myself().name(), topic);
+        println!(
+            "{}: pre_start subscribe to {:?}",
+            ctx.myself().name(),
+            topic
+        );
         let sub = Box::new(ctx.myself());
         self.chan.tell(Subscribe { actor: sub, topic }, None);
     }
@@ -57,7 +61,11 @@ impl Actor for NavigationActor {
     fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         let topic = Topic::from("my-topic");
 
-        println!("{}: pre_start subscribe to {:?}", ctx.myself().name(), topic);
+        println!(
+            "{}: pre_start subscribe to {:?}",
+            ctx.myself().name(),
+            topic
+        );
         let sub = Box::new(ctx.myself());
         self.chan.tell(Subscribe { actor: sub, topic }, None);
     }
