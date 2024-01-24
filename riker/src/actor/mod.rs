@@ -234,8 +234,6 @@ impl<A: Actor + ?Sized> Actor for Box<A> {
 /// }
 ///
 /// impl Receive<Foo> for MyActor {
-///     type Msg = MyActorMsg;
-///
 ///     fn receive(&mut self,
 ///                 ctx: &Context<Self::Msg>,
 ///                 msg: Foo, // <-- receive Foo
@@ -254,11 +252,13 @@ impl<A: Actor + ?Sized> Actor for Box<A> {
 /// }
 ///
 /// // main
+/// # tokio_test::block_on(async {
 /// let sys = ActorSystem::new().unwrap();
 /// let actor = sys.actor_of::<MyActor>("my-actor").unwrap();
-///
+/// 
 /// actor.tell(Foo, None);
 /// actor.tell(Bar, None);
+/// })
 /// ```
 pub trait Receive<Msg: Message>: Actor {
     /// Invoked when an actor receives a message

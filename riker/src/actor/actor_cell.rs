@@ -11,11 +11,11 @@ use std::{
 use chrono::prelude::*;
 use dashmap::DashMap;
 use futures::Future;
+use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 use crate::{
     actor::{props::ActorFactory, *},
-    executor::{TaskError, TaskHandle},
     kernel::{
         kernel_ref::{dispatch, dispatch_any, KernelRef},
         mailbox::{AnyEnqueueError, AnySender, MailboxSender},
@@ -558,7 +558,7 @@ impl<Msg> Run for Context<Msg>
 where
     Msg: Message,
 {
-    fn run<Fut>(&self, future: Fut) -> Result<TaskHandle<Fut::Output>, TaskError>
+    fn run<Fut>(&self, future: Fut) -> JoinHandle<Fut::Output>
     where
         Fut: Future + Send + 'static,
         Fut::Output: Send,

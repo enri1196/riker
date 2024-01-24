@@ -4,9 +4,8 @@ use std::sync::{Arc, Mutex};
 
 use futures::FutureExt;
 use tokio::sync::oneshot::{channel, Sender as ChannelSender};
-
+use tokio::task::JoinHandle;
 use crate::actors::*;
-use crate::executor::TaskHandle;
 
 /// Convenience fuction to send and receive a message from an actor
 ///
@@ -26,9 +25,8 @@ use crate::executor::TaskHandle;
 ///
 /// ```
 /// # use riker::actors::*;
-/// # use riker_patterns::ask::ask;
-/// # use futures::future::RemoteHandle;
-/// # use futures::executor::block_on;
+/// # use riker::ask::ask;
+/// # use tokio::task::JoinHandle;
 ///
 /// #[derive(Default)]
 /// struct Reply;
@@ -48,6 +46,7 @@ use crate::executor::TaskHandle;
 /// }
 ///
 /// // set up the actor system
+/// # tokio_test::block_on(async {
 /// let sys = ActorSystem::new().unwrap();
 ///
 /// // create instance of Reply actor
@@ -55,12 +54,13 @@ use crate::executor::TaskHandle;
 ///
 /// // ask the actor
 /// let msg = "Will Riker".to_string();
-/// let r: RemoteHandle<String> = ask(&sys, &actor, msg);
+/// let r: JoinHandle<String> = ask(&sys, &actor, msg);
 ///
-/// assert_eq!(block_on(r), "Hello Will Riker".to_string());
+/// assert_eq!(r.await.unwrap(), "Hello Will Riker".to_string());
+/// # })
 /// ```
 
-pub fn ask<Msg, Ctx, R, T>(ctx: &Ctx, receiver: &T, msg: Msg) -> TaskHandle<R>
+pub fn ask<Msg, Ctx, R, T>(ctx: &Ctx, receiver: &T, msg: Msg) -> JoinHandle<R>
 where
     Msg: Message,
     R: Message,
@@ -74,14 +74,14 @@ where
     let actor = ctx.tmp_actor_of_props(props).unwrap();
     receiver.tell(msg, Some(actor.into()));
 
-    ctx.run(rx.map(|r| r.unwrap())).unwrap()
+    ctx.run(rx.map(|r| r.unwrap()))
 }
 
 pub fn ask_ref<Msg: Message, R: Message>(
     sys: ActorSystem,
     receiver: &BasicActorRef,
     msg: Msg,
-) -> TaskHandle<R> {
+) -> JoinHandle<R> {
     let (tx, rx) = channel::<R>();
     let tx = Arc::new(Mutex::new(Some(tx)));
 
@@ -89,7 +89,7 @@ pub fn ask_ref<Msg: Message, R: Message>(
     let actor = sys.tmp_actor_of_props(props).unwrap();
     receiver.try_tell(msg, Some(actor.into())).unwrap();
 
-    sys.run(rx.map(|r| r.unwrap())).unwrap()
+    sys.run(rx.map(|r| r.unwrap()))
 }
 
 struct AskActor<Msg> {

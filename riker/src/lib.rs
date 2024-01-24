@@ -9,7 +9,6 @@ mod validate;
 
 pub mod actor;
 pub mod ask;
-pub mod executor;
 pub mod kernel;
 pub mod system;
 

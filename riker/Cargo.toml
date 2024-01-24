@@ -32,6 +32,7 @@ serde_json = { version = "1.0.111", optional = true }
 [dev-dependencies]
 riker-testkit = { path = "../riker-testkit" }
 log = "0.4.20"
+tokio-test = "0.4.3"
 
 [features]
 serde = ["dep:serde_json"]

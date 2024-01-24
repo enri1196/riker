@@ -94,7 +94,7 @@ where
         }
     };
 
-    sys.run(f).unwrap().forget();
+    sys.run(f);
     Ok(kr)
 }
 

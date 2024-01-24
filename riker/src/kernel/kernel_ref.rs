@@ -39,9 +39,7 @@ impl KernelRef {
         let tx = self.tx.clone();
         sys.run(async move {
             drop(tx.send(msg).await);
-        })
-        .unwrap()
-        .forget();
+        });
     }
 }
 

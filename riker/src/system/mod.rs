@@ -10,7 +10,6 @@ use std::fmt;
 use crate::{
     actor::BasicActorRef,
     actors::selection::RefSelectionFactory,
-    executor::{get_executor_handle, ExecutorHandle, TaskError, TaskExecutor, TaskHandle},
 };
 
 // Public riker::system API (plus the pub data types in this file)
@@ -146,8 +145,8 @@ use std::{
 
 use chrono::prelude::*;
 use config::Config;
-use futures::{Future, FutureExt};
-use tokio::sync::oneshot;
+use futures::Future;
+use tokio::{runtime::Handle, sync::oneshot, task::JoinHandle};
 
 use uuid::Uuid;
 
@@ -177,7 +176,7 @@ pub struct ProtoSystem {
 pub struct SystemBuilder {
     name: Option<String>,
     cfg: Option<Config>,
-    exec: Option<ExecutorHandle>,
+    exec: Option<Handle>,
 }
 
 impl SystemBuilder {
@@ -207,7 +206,7 @@ impl SystemBuilder {
         }
     }
 
-    pub fn exec(self, exec: ExecutorHandle) -> Self {
+    pub fn exec(self, exec: Handle) -> Self {
         SystemBuilder {
             exec: Some(exec),
             ..self
@@ -226,7 +225,7 @@ impl SystemBuilder {
 pub struct ActorSystem {
     proto: Arc<ProtoSystem>,
     sys_actors: Option<SysActors>,
-    pub exec: ExecutorHandle,
+    pub exec: Handle,
     pub timer: TimerRef,
     pub sys_channels: Option<SysChannels>,
     pub(crate) provider: Provider,
@@ -246,10 +245,10 @@ impl ActorSystem {
     /// Create a new `ActorSystem` instance with provided executor
     ///
     /// Requires a type that implements the `TaskExecutor` trait.
-    pub fn with_executor(exec: impl TaskExecutor + 'static) -> Result<ActorSystem, SystemError> {
+    pub fn with_executor(exec: Handle) -> Result<ActorSystem, SystemError> {
         let cfg = load_config();
 
-        ActorSystem::create("riker", Arc::new(exec), cfg)
+        ActorSystem::create("riker", exec, cfg)
     }
 
     /// Create a new `ActorSystem` instance with provided name
@@ -269,7 +268,7 @@ impl ActorSystem {
         ActorSystem::create(name, exec, cfg)
     }
 
-    fn create(name: &str, exec: ExecutorHandle, cfg: Config) -> Result<ActorSystem, SystemError> {
+    fn create(name: &str, exec: Handle, cfg: Config) -> Result<ActorSystem, SystemError> {
         validate_name(name).map_err(|_| SystemError::InvalidName(name.into()))?;
         // Until the logger has started, use println
         debug!("Starting actor system: System[{}]", name);
@@ -686,26 +685,19 @@ impl RefSelectionFactory for ActorSystem {
 }
 
 pub trait Run {
-    fn run<Fut>(&self, future: Fut) -> Result<TaskHandle<Fut::Output>, TaskError>
+    fn run<Fut>(&self, future: Fut) -> JoinHandle<Fut::Output>
     where
         Fut: Future + Send + 'static,
         Fut::Output: Send;
 }
 
 impl Run for ActorSystem {
-    fn run<Fut>(&self, future: Fut) -> Result<TaskHandle<Fut::Output>, TaskError>
+    fn run<Fut>(&self, future: Fut) -> JoinHandle<Fut::Output>
     where
         Fut: Future + Send + 'static,
         Fut::Output: Send,
     {
-        let (sender, recv) = oneshot::channel::<Fut::Output>();
-        let handle = self.exec.spawn(Box::pin(
-            async move {
-                drop(sender.send(future.await));
-            }
-            .boxed(),
-        ))?;
-        Ok(TaskHandle::new(handle, recv))
+        self.exec.spawn(future)
     }
 }
 
@@ -880,8 +872,8 @@ impl<'a> From<&'a Config> for SystemSettings {
     }
 }
 
-fn default_exec(cfg: &Config) -> ExecutorHandle {
-    get_executor_handle(cfg)
+fn default_exec(_cfg: &Config) -> Handle {
+    Handle::current()
 }
 
 #[derive(Clone)]

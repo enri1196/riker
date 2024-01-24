@@ -37,12 +37,14 @@ impl Props {
     /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _sender: Sender) {}
     /// # }
     /// // main
+    /// # tokio_test::block_on(async {
     /// let sys = ActorSystem::new().unwrap();
     ///
     /// let props = Props::new_from(User::actor);
     ///
     /// // start the actor and get an `ActorRef`
     /// let actor = sys.actor_of_props("user", props).unwrap();
+    /// })
     /// ```
     #[inline]
     pub fn new_from<A, F>(creator: F) -> Arc<Mutex<impl ActorProducer<Actor = A>>>
@@ -77,11 +79,13 @@ impl Props {
     /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _sender: Sender) {}
     /// # }
     /// // main
+    /// # tokio_test::block_on(async {
     /// let sys = ActorSystem::new().unwrap();
     ///
     /// let props = Props::new_from_args(User::actor, "Naomi Nagata".into());
     ///
     /// let actor = sys.actor_of_props("user", props).unwrap();
+    /// # })
     /// ```
     /// An actor requiring multiple parameters.
     /// ```
@@ -106,6 +110,7 @@ impl Props {
     /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _sender: Sender) {}
     /// # }
     /// // main
+    /// # tokio_test::block_on(async {
     /// let sys = ActorSystem::new().unwrap();
     ///
     /// let props = Props::new_from_args(BankAccount::actor,
@@ -113,6 +118,7 @@ impl Props {
     ///
     /// // start the actor and get an `ActorRef`
     /// let actor = sys.actor_of_props("bank_account", props).unwrap();
+    /// # })
     /// ```
     #[inline]
     pub fn new_from_args<A, Args, F>(
@@ -142,12 +148,14 @@ impl Props {
     /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _sender: Sender) {}
     /// # }
     /// // main
+    /// # tokio_test::block_on(async {
     /// let sys = ActorSystem::new().unwrap();
     ///
     /// let props = Props::new::<User>();
     ///
     /// // start the actor and get an `ActorRef`
     /// let actor = sys.actor_of_props("user", props).unwrap();
+    /// # })
     /// ```
     /// Creates an `ActorProducer` from a type which implements ActorFactory with no factory method parameters.
     ///
@@ -169,12 +177,14 @@ impl Props {
     /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _sender: Sender) {}
     /// # }
     /// // main
+    /// # tokio_test::block_on(async {
     /// let sys = ActorSystem::new().unwrap();
     ///
     /// let props = Props::new::<User>();
     ///
     /// // start the actor and get an `ActorRef`
     /// let actor = sys.actor_of_props("user", props).unwrap();
+    /// # })
     /// ```
     #[inline]
     pub fn new<A>() -> Arc<Mutex<impl ActorProducer<Actor = A>>>
@@ -208,11 +218,13 @@ impl Props {
     /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _sender: Sender) {}
     /// # }
     /// // main
+    /// # tokio_test::block_on(async {
     /// let sys = ActorSystem::new().unwrap();
     ///
     /// let props = Props::new_args::<User, _>("Naomi Nagata".into());
     ///
     /// let actor = sys.actor_of_props("user", props).unwrap();
+    /// # })
     /// ```
     /// An actor requiring multiple parameters.
     /// ```
@@ -237,6 +249,7 @@ impl Props {
     /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _sender: Sender) {}
     /// # }
     /// // main
+    /// # tokio_test::block_on(async {
     /// let sys = ActorSystem::new().unwrap();
     ///
     /// let props = Props::new_from_args(BankAccount::create_args,
@@ -244,6 +257,7 @@ impl Props {
     ///
     /// // start the actor and get an `ActorRef`
     /// let actor = sys.actor_of_props("bank_account", props).unwrap();
+    /// })
     /// ```
     #[inline]
     pub fn new_args<A, Args>(args: Args) -> Arc<Mutex<impl ActorProducer<Actor = A>>>
