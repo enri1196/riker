@@ -41,8 +41,8 @@ impl Actor for SelectTest {
     }
 }
 
-#[riker_macros::test]
-fn select_child() {
+#[tokio::test]
+async fn select_child() {
     let sys = ActorSystem::new().unwrap();
 
     sys.actor_of::<SelectTest>("select-actor").unwrap();
@@ -57,8 +57,8 @@ fn select_child() {
     p_assert_eq!(listen, ());
 }
 
-#[riker_macros::test]
-fn select_child_of_child() {
+#[tokio::test]
+async fn select_child_of_child() {
     let sys = ActorSystem::new().unwrap();
 
     sys.actor_of::<SelectTest>("select-actor").unwrap();
@@ -77,8 +77,8 @@ fn select_child_of_child() {
     p_assert_eq!(listen, ());
 }
 
-#[riker_macros::test]
-fn select_all_children_of_child() {
+#[tokio::test]
+async fn select_all_children_of_child() {
     let sys = ActorSystem::new().unwrap();
 
     sys.actor_of::<SelectTest>("select-actor").unwrap();
@@ -143,8 +143,8 @@ impl Actor for SelectTest2 {
     }
 }
 
-#[riker_macros::test]
-fn select_from_context() {
+#[tokio::test]
+async fn select_from_context() {
     let sys = ActorSystem::new().unwrap();
 
     let actor = sys.actor_of::<SelectTest2>("select-actor").unwrap();
@@ -162,8 +162,8 @@ fn select_from_context() {
     p_assert_eq!(listen, ());
 }
 
-#[riker_macros::test]
-fn select_paths() {
+#[tokio::test]
+async fn select_paths() {
     let sys = ActorSystem::new().unwrap();
 
     assert!(sys.select("foo/").is_ok());

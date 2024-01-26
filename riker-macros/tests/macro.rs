@@ -29,8 +29,8 @@ impl Receive<String> for NewActor {
     }
 }
 
-#[riker_macros::test]
-fn run_derived_actor() {
+#[tokio::test]
+async fn run_derived_actor() {
     let sys = ActorSystem::new().unwrap();
 
     let act = sys.actor_of::<NewActor>("act").unwrap();
@@ -74,8 +74,8 @@ impl<A: Send + 'static, B: Send + 'static> Receive<String> for GenericActor<A, B
     }
 }
 
-#[riker_macros::test]
-fn run_derived_generic_actor() {
+#[tokio::test]
+async fn run_derived_generic_actor() {
     let sys = ActorSystem::new().unwrap();
 
     let act = sys.actor_of::<GenericActor<(), ()>>("act").unwrap();
@@ -123,8 +123,8 @@ impl Receive<Message<String>> for GenericMsgActor {
     }
 }
 
-#[riker_macros::test]
-fn run_generic_message_actor() {
+#[tokio::test]
+async fn run_generic_message_actor() {
     let sys = ActorSystem::new().unwrap();
 
     let act = sys.actor_of::<GenericMsgActor>("act").unwrap();
@@ -190,8 +190,8 @@ impl Receive<test_mod::Message> for PathMsgActor {
     }
 }
 
-#[riker_macros::test]
-fn run_path_message_actor() {
+#[tokio::test]
+async fn run_path_message_actor() {
     let sys = ActorSystem::new().unwrap();
 
     let act = sys.actor_of::<PathMsgActor>("act").unwrap();

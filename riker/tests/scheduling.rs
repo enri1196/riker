@@ -43,8 +43,8 @@ impl Receive<SomeMessage> for ScheduleOnce {
     }
 }
 
-#[riker_macros::test]
-fn schedule_once() {
+#[tokio::test]
+async fn schedule_once() {
     let sys = ActorSystem::new().unwrap();
 
     let actor = sys.actor_of::<ScheduleOnce>("schedule-once").unwrap();
@@ -56,8 +56,8 @@ fn schedule_once() {
     p_assert_eq!(listen, ());
 }
 
-#[riker_macros::test]
-fn schedule_at_time() {
+#[tokio::test]
+async fn schedule_at_time() {
     let sys = ActorSystem::new().unwrap();
 
     let actor = sys.actor_of::<ScheduleOnce>("schedule-once").unwrap();
@@ -114,8 +114,8 @@ impl Receive<SomeMessage> for ScheduleRepeat {
     }
 }
 
-#[riker_macros::test]
-fn schedule_repeat() {
+#[tokio::test]
+async fn schedule_repeat() {
     let sys = ActorSystem::new().unwrap();
 
     let actor = sys.actor_of::<ScheduleRepeat>("schedule-repeat").unwrap();

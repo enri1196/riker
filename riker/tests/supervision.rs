@@ -90,8 +90,8 @@ impl Receive<Panic> for RestartSup {
     }
 }
 
-#[riker_macros::test]
-fn supervision_restart_failed_actor() {
+#[tokio::test]
+async fn supervision_restart_failed_actor() {
     let sys = ActorSystem::new().unwrap();
 
     for i in 0..100 {
@@ -187,8 +187,8 @@ impl Receive<Panic> for EscRestartSup {
     }
 }
 
-#[riker_macros::test]
-fn supervision_escalate_failed_actor() {
+#[tokio::test]
+async fn supervision_escalate_failed_actor() {
     let sys = ActorSystem::new().unwrap();
 
     let sup = sys.actor_of::<EscRestartSup>("supervisor").unwrap();

@@ -177,8 +177,8 @@ pub mod macros {
     mod tests {
         use crate::probe::{channel::probe, Probe, ProbeReceive};
 
-        #[riker_macros::test]
-        fn p_assert_eq() {
+        #[tokio::test]
+        async fn p_assert_eq() {
             let (probe, mut listen) = probe();
 
             probe.event("test".to_string());
@@ -186,8 +186,8 @@ pub mod macros {
             p_assert_eq!(listen, "test".to_string());
         }
 
-        #[riker_macros::test]
-        fn p_assert_events() {
+        #[tokio::test]
+        async fn p_assert_events() {
             let (probe, mut listen) = probe();
 
             let expected = vec!["event_1", "event_2", "event_3"];
@@ -198,8 +198,8 @@ pub mod macros {
             p_assert_events!(listen, expected);
         }
 
-        #[riker_macros::test]
-        fn p_timer() {
+        #[tokio::test]
+        async fn p_timer() {
             let (probe, listen) = probe();
             probe.event("event_3");
 
@@ -213,8 +213,8 @@ mod tests {
     use super::channel::{probe, probe_with_payload};
     use super::{Probe, ProbeReceive};
 
-    #[riker_macros::test]
-    fn chan_probe() {
+    #[tokio::test]
+    async fn chan_probe() {
         let (probe, mut listen) = probe();
 
         probe.event("some event");
@@ -222,8 +222,8 @@ mod tests {
         p_assert_eq!(listen, "some event");
     }
 
-    #[riker_macros::test]
-    fn chan_probe_with_payload() {
+    #[tokio::test]
+    async fn chan_probe_with_payload() {
         let payload = "test data".to_string();
         let (probe, mut listen) = probe_with_payload(payload);
 

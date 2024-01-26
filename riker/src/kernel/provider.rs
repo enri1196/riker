@@ -13,23 +13,11 @@ use crate::{
 };
 
 #[derive(Clone)]
-pub struct Provider {
-    inner: Arc<ProviderInner>,
-}
-
-struct ProviderInner {
-    paths: DashMap<ActorPath, ()>,
-}
+pub struct Provider(Arc<DashMap<ActorPath, ()>>);
 
 impl Provider {
     pub fn new() -> Self {
-        let inner = ProviderInner {
-            paths: DashMap::new(),
-        };
-
-        Provider {
-            inner: Arc::new(inner),
-        }
+        Self(Arc::new(DashMap::new()))
     }
 
     pub fn create_actor<A>(
@@ -79,7 +67,7 @@ impl Provider {
     }
 
     fn register(&self, path: &ActorPath) -> Result<(), CreateError> {
-        let old = self.inner.paths.insert(path.clone(), ());
+        let old = self.0.insert(path.clone(), ());
         if old.is_some() {
             Err(CreateError::AlreadyExists(path.clone()))
         } else {
@@ -88,7 +76,7 @@ impl Provider {
     }
 
     pub fn unregister(&self, path: &ActorPath) {
-        self.inner.paths.remove(path);
+        self.0.remove(path);
     }
 }
 

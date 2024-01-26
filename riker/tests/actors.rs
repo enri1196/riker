@@ -43,8 +43,8 @@ impl Receive<Add> for Counter {
     }
 }
 
-#[riker_macros::test]
-fn actor_create() {
+#[tokio::test]
+async fn actor_create() {
     let sys = ActorSystem::new().unwrap();
 
     assert!(sys.actor_of::<Counter>("valid-name").is_ok());
@@ -74,8 +74,8 @@ fn actor_create() {
     assert!(sys.actor_of::<Counter>("!").is_err());
 }
 
-#[riker_macros::test]
-fn actor_tell() {
+#[tokio::test]
+async fn actor_tell() {
     let sys = ActorSystem::new().unwrap();
 
     let actor = sys.actor_of::<Counter>("me").unwrap();
@@ -90,8 +90,8 @@ fn actor_tell() {
     p_assert_eq!(listen, ());
 }
 
-#[riker_macros::test]
-fn actor_try_tell() {
+#[tokio::test]
+async fn actor_try_tell() {
     let sys = ActorSystem::new().unwrap();
 
     let actor = sys.actor_of::<Counter>("me").unwrap();
@@ -151,8 +151,8 @@ impl Actor for Child {
     fn recv(&mut self, _: &Context<Self::Msg>, _: Self::Msg, _: Sender) {}
 }
 
-#[riker_macros::test]
-fn actor_stop() {
+#[tokio::test]
+async fn actor_stop() {
     let system = ActorSystem::new().unwrap();
 
     let parent = system.actor_of::<Parent>("parent").unwrap();

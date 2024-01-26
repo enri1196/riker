@@ -62,8 +62,8 @@ impl Receive<SomeMessage> for Subscriber {
     }
 }
 
-#[riker_macros::test]
-fn channel_publish() {
+#[tokio::test]
+async fn channel_publish() {
     let sys = ActorSystem::new().unwrap();
 
     // Create the channel we'll be using
@@ -94,8 +94,8 @@ fn channel_publish() {
     p_assert_eq!(listen, ());
 }
 
-#[riker_macros::test]
-fn channel_publish_subscribe_all() {
+#[tokio::test]
+async fn channel_publish_subscribe_all() {
     let sys = ActorSystem::new().unwrap();
 
     // Create the channel we'll be using
@@ -242,8 +242,8 @@ impl Receive<SystemEvent> for EventSubscriber {
     }
 }
 
-#[riker_macros::test]
-fn channel_system_events() {
+#[tokio::test]
+async fn channel_system_events() {
     let sys = ActorSystem::new().unwrap();
 
     let actor = sys.actor_of::<EventSubscriber>("event-sub").unwrap();
@@ -311,8 +311,8 @@ impl Receive<DeadLetter> for DeadLetterSub {
     }
 }
 
-#[riker_macros::test]
-fn channel_dead_letters() {
+#[tokio::test]
+async fn channel_dead_letters() {
     let sys = ActorSystem::new().unwrap();
     let actor = sys.actor_of::<DeadLetterSub>("dl-subscriber").unwrap();
 
