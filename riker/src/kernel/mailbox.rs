@@ -196,7 +196,7 @@ where
     A: Actor,
 {
     let sen = Sentinel {
-        actor: ctx.myself().into(),
+        actor: ctx.myself().clone().into(),
         parent: ctx.myself().parent(),
         mbox,
     };

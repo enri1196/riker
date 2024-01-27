@@ -34,7 +34,7 @@ impl Actor for Subscriber {
     type Msg = SubscriberMsg;
 
     fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
-        let sub = Box::new(ctx.myself());
+        let sub = Box::new(ctx.myself().clone());
         self.chan.tell(
             Subscribe {
                 actor: sub,
@@ -192,7 +192,7 @@ impl Actor for EventSubscriber {
 
     fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         // subscribe
-        let sub = Box::new(ctx.myself());
+        let sub = Box::new(ctx.myself().clone());
         ctx.system().sys_events().tell(
             Subscribe {
                 actor: sub,
@@ -283,7 +283,7 @@ impl Actor for DeadLetterSub {
 
     fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         // subscribe to dead_letters
-        let sub = Box::new(ctx.myself());
+        let sub = Box::new(ctx.myself().clone());
         ctx.system().dead_letters().tell(
             Subscribe {
                 actor: sub,

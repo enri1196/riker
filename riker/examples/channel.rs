@@ -29,7 +29,7 @@ impl Actor for GpsActor {
             ctx.myself().name(),
             topic
         );
-        let sub = Box::new(ctx.myself());
+        let sub = Box::new(ctx.myself().clone());
         self.chan.tell(Subscribe { actor: sub, topic }, None);
     }
 
@@ -66,7 +66,7 @@ impl Actor for NavigationActor {
             ctx.myself().name(),
             topic
         );
-        let sub = Box::new(ctx.myself());
+        let sub = Box::new(ctx.myself().clone());
         self.chan.tell(Subscribe { actor: sub, topic }, None);
     }
 

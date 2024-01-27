@@ -20,7 +20,7 @@ impl Actor for DeadLetterLogger {
     type Msg = DeadLetter;
 
     fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
-        let sub = Box::new(ctx.myself());
+        let sub = Box::new(ctx.myself().clone());
         self.dl_chan.tell(
             Subscribe {
                 topic: All.into(),

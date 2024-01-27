@@ -915,7 +915,7 @@ impl Actor for ShutdownActor {
     fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         let sub = Subscribe {
             topic: SysTopic::ActorTerminated.into(),
-            actor: Box::new(ctx.myself()),
+            actor: Box::new(ctx.myself().clone()),
         };
         ctx.system().sys_events().tell(sub, None);
 

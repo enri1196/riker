@@ -110,6 +110,6 @@ impl<Msg: Message> Actor for AskActor<Msg> {
         if let Ok(mut tx) = self.tx.lock() {
             tx.take().unwrap().send(msg).unwrap();
         }
-        ctx.stop(&ctx.myself());
+        ctx.stop(ctx.myself());
     }
 }

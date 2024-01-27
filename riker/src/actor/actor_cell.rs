@@ -475,7 +475,7 @@ impl<Msg: Message> ActorRefFactory for Context<Msg> {
     {
         self.system
             .provider
-            .create_actor(props, name, &(*self.myself()).into(), &self.system)
+            .create_actor(props, name, &self.myself().clone().into(), &self.system)
     }
 
     fn actor_of<A>(&self, name: &str) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
@@ -485,7 +485,7 @@ impl<Msg: Message> ActorRefFactory for Context<Msg> {
         self.system.provider.create_actor(
             Props::new::<A>(),
             name,
-            &(*self.myself()).into(),
+            &self.myself().clone().into(),
             self.system(),
         )
     }
@@ -502,7 +502,7 @@ impl<Msg: Message> ActorRefFactory for Context<Msg> {
         self.system.provider.create_actor(
             Props::new_args::<A, _>(args),
             name,
-            &(*self.myself()).into(),
+            &self.myself().clone().into(),
             self.system(),
         )
     }

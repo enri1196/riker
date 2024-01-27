@@ -40,7 +40,7 @@ impl Actor for DeadLetterActor {
             ctx.myself().name(),
             topic
         );
-        let sub = Box::new(ctx.myself());
+        let sub = Box::new(ctx.myself().clone());
 
         ctx.system()
             .dead_letters()

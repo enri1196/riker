@@ -40,7 +40,7 @@ impl Actor for SystemActor {
             ctx.myself().name(),
             topic
         );
-        let sub = Box::new(ctx.myself());
+        let sub = Box::new(ctx.myself().clone());
 
         ctx.system().sys_events().tell(
             Subscribe {
