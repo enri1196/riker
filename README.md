@@ -16,11 +16,12 @@ Riker provides:
 - An Actor based execution runtime
 - Actor supervision to isolate and recover from failures
 - A modular system
-- Concurrency built on `futures::execution::ThreadPool`
+- Concurrency built on `Tokio`
 - Publish/Subscribe messaging via actor channels
 - Message scheduling
-- Out-of-the-box, configurable, non-blocking logging
+- Logging based on `tracing`
 - Command Query Responsibility Segregation (CQRS)
+- Builtin Ask pattern
 - Easily run futures
 
 [Website](https://riker.rs) | [API Docs](https://docs.rs/riker)
@@ -48,23 +49,23 @@ impl Actor for MyActor {
     type Msg = String;
 
     fn recv(&mut self,
-                _ctx: &Context<String>,
-                msg: String,
-                _sender: Sender) {
-
+            _ctx: &Context<String>,
+            msg: String,
+            _sender: Sender) {
         println!("Received: {}", msg);
     }
 }
 
 // start the system and create an actor
-fn main() {
+#[tokio::main]
+async fn main() {
     let sys = ActorSystem::new().unwrap();
 
     let my_actor = sys.actor_of::<MyActor>("my-actor").unwrap();
 
     my_actor.tell("Hello my actor!".to_string(), None);
 
-    tokio::time::sleep(Duration::from_millis(500));
+    tokio::time::sleep(Duration::from_millis(500)).await;
 }
 ```
 
