@@ -65,10 +65,7 @@ pub trait Ask<Msg: Message> {
 }
 
 impl<Msg: Message> Ask<Msg> for ActorRef<Msg> {
-    fn ask<Ret>(&self, msg: Msg) -> JoinHandle<Ret>
-    where
-        Ret: Message,
-    {
+    fn ask<Ret: Message>(&self, msg: Msg) -> JoinHandle<Ret> {
         let (tx, rx) = channel::<Ret>();
         let tx = Arc::new(Mutex::new(Some(tx)));
         let sys = self.cell.system();
