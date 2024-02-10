@@ -25,7 +25,7 @@ use crate::actors::*;
 ///
 /// ```
 /// # use riker::actors::*;
-/// # use riker::ask::ask;
+/// # use riker::ask::Ask;
 /// # use tokio::task::JoinHandle;
 ///
 /// #[derive(Default)]
@@ -54,7 +54,7 @@ use crate::actors::*;
 ///
 /// // ask the actor
 /// let msg = "Will Riker".to_string();
-/// let r: JoinHandle<String> = ask(&sys, &actor, msg);
+/// let r: JoinHandle<String> = actor.ask(msg);
 ///
 /// assert_eq!(r.await.unwrap(), "Hello Will Riker".to_string());
 /// # })
