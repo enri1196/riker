@@ -1,5 +1,5 @@
 extern crate riker;
-use riker::{actors::*, ask::ask_ref};
+use riker::{actors::*, ask::Ask};
 
 #[derive(Clone, Debug)]
 pub struct Panic;
@@ -21,8 +21,7 @@ impl Actor for DumbActor {
 async fn main() {
     let sys = SystemBuilder::new().name("my-app").create().unwrap();
 
-    let _sup = sys.actor_of::<DumbActor>("dumb").unwrap();
-    let ac_ref = sys.select_ref("/user/dumb").unwrap();
-    let str = ask_ref::<_, String>(sys, &ac_ref, ()).await.unwrap();
+    let sup = sys.actor_of::<DumbActor>("dumb").unwrap();
+    let str = sup.ask::<String>(()).await.unwrap();
     println!("{str}")
 }

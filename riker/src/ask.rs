@@ -60,36 +60,39 @@ use crate::actors::*;
 /// # })
 /// ```
 
-pub fn ask<Msg, Ctx, R, T>(ctx: &Ctx, receiver: &T, msg: Msg) -> JoinHandle<R>
-where
-    Msg: Message,
-    R: Message,
-    Ctx: TmpActorRefFactory + Run,
-    T: Tell<Msg>,
-{
-    let (tx, rx) = channel::<R>();
-    let tx = Arc::new(Mutex::new(Some(tx)));
-
-    let props = Props::new_from_args(Box::new(AskActor::new), tx);
-    let actor = ctx.tmp_actor_of_props(props).unwrap();
-    receiver.tell(msg, Some(actor.into()));
-
-    ctx.run(rx.map(|r| r.unwrap()))
+pub trait Ask<Msg: Message> {
+    fn ask<Ret: Message>(&self, msg: Msg) -> JoinHandle<Ret>;
 }
 
-pub fn ask_ref<Msg: Message, R: Message>(
-    sys: ActorSystem,
-    receiver: &BasicActorRef,
-    msg: Msg,
-) -> JoinHandle<R> {
-    let (tx, rx) = channel::<R>();
-    let tx = Arc::new(Mutex::new(Some(tx)));
+impl<Msg: Message> Ask<Msg> for ActorRef<Msg> {
+    fn ask<Ret>(&self, msg: Msg) -> JoinHandle<Ret>
+    where
+        Ret: Message,
+    {
+        let (tx, rx) = channel::<Ret>();
+        let tx = Arc::new(Mutex::new(Some(tx)));
+        let sys = self.cell.system();
 
-    let props = Props::new_from_args(Box::new(AskActor::new), tx);
-    let actor = sys.tmp_actor_of_props(props).unwrap();
-    receiver.try_tell(msg, Some(actor.into())).unwrap();
+        let props = Props::new_from_args(Box::new(AskActor::new), tx);
+        let actor = sys.tmp_actor_of_props(props).unwrap();
+        self.tell(msg, Some(actor.into()));
 
-    sys.run(rx.map(|r| r.unwrap()))
+        sys.run(rx.map(|r| r.unwrap()))
+    }
+}
+
+impl<Msg: Message> Ask<Msg> for BasicActorRef {
+    fn ask<Ret: Message>(&self, msg: Msg) -> JoinHandle<Ret> {
+        let (tx, rx) = channel::<Ret>();
+        let tx = Arc::new(Mutex::new(Some(tx)));
+        let sys = self.cell.system();
+
+        let props = Props::new_from_args(Box::new(AskActor::new), tx);
+        let actor = sys.tmp_actor_of_props(props).unwrap();
+        self.try_tell(msg, Some(actor.into())).unwrap();
+
+        sys.run(rx.map(|r| r.unwrap()))
+    }
 }
 
 struct AskActor<Msg> {
