@@ -15,9 +15,11 @@ pub enum KernelMsg {
 }
 use std::{
     panic::{catch_unwind, AssertUnwindSafe},
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
+use tokio::sync::Mutex;
 
+use futures::FutureExt;
 use tokio::sync::mpsc::channel;
 use tracing::warn;
 
@@ -59,31 +61,34 @@ where
 {
     let (tx, mut rx) = channel::<KernelMsg>(1000); // todo config?
     let kr = KernelRef { tx };
-
-    let mut asys = sys.clone();
-    let akr = kr.clone();
     let actor = start_actor(&props)?;
-    let cell = cell.init(&kr);
 
-    let mut dock = Dock {
-        actor: Arc::new(Mutex::new(Some(actor))),
-        cell: cell.clone(),
-    };
-
-    let actor_ref = ActorRef::new(cell);
-
+    let outer_sys = sys.clone();
+    let outer_kr = kr.clone();
     let f = async move {
+        let mut asys = outer_sys;
+        let akr = outer_kr;
+        let cell = cell.init(&akr);
+        let actor = actor;
+
+        let mut dock = Dock {
+            actor: Arc::new(Mutex::new(Some(actor))),
+            cell: cell.clone(),
+        };
+
+        let actor_ref = ActorRef::new(cell);
+
         while let Some(msg) = rx.recv().await {
             match msg {
                 KernelMsg::RunActor => {
                     let ctx = Context::new(actor_ref.clone(), asys.clone(), akr.clone());
 
-                    let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
-                        run_mailbox(&mailbox, ctx, &mut dock)
-                    })); //.unwrap();
+                    let _ = AssertUnwindSafe(run_mailbox(&mailbox, ctx, &mut dock))
+                        .catch_unwind()
+                        .await;
                 }
                 KernelMsg::RestartActor => {
-                    restart_actor(&dock, actor_ref.clone().into(), &props, &asys);
+                    restart_actor(&dock, actor_ref.clone().into(), &props, &asys).await;
                 }
                 KernelMsg::TerminateActor => {
                     terminate_actor(&mailbox, actor_ref.clone().into(), &asys);
@@ -100,7 +105,7 @@ where
     Ok(kr)
 }
 
-fn restart_actor<A>(
+async fn restart_actor<A>(
     dock: &Dock<A>,
     actor_ref: BasicActorRef,
     props: &BoxActorProd<A>,
@@ -108,7 +113,7 @@ fn restart_actor<A>(
 ) where
     A: Actor,
 {
-    let mut a = dock.actor.lock().unwrap();
+    let mut a = dock.actor.lock().await;
     match start_actor(props) {
         Ok(actor) => {
             *a = Some(actor);

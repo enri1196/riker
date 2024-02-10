@@ -193,7 +193,7 @@ where
     (sender, sys_sender, mailbox)
 }
 
-pub fn run_mailbox<A>(mbox: &Mailbox<A::Msg>, ctx: Context<A::Msg>, dock: &mut Dock<A>)
+pub async fn run_mailbox<A>(mbox: &Mailbox<A::Msg>, ctx: Context<A::Msg>, dock: &mut Dock<A>)
 where
     A: Actor,
 {
@@ -203,7 +203,7 @@ where
         mbox,
     };
 
-    let mut actor = dock.actor.lock().unwrap().take();
+    let mut actor = dock.actor.lock().await.take();
     let cell = &mut dock.cell;
 
     process_sys_msgs(&sen.mbox, &ctx, cell, &mut actor);
@@ -215,7 +215,7 @@ where
     process_sys_msgs(&sen.mbox, &ctx, cell, &mut actor);
 
     if actor.is_some() {
-        let mut a = dock.actor.lock().unwrap();
+        let mut a = dock.actor.lock().await;
         *a = actor;
     }
 
