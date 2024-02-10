@@ -16,7 +16,7 @@ pub use self::{
     actor_cell::Context,
     actor_ref::{
         ActorRef, ActorRefFactory, ActorReference, BasicActorRef, BoxedTell, Sender, Tell,
-        TmpActorRefFactory,
+        TmpActorRefFactory, SysTell
     },
     channel::{
         channel, All, Channel, ChannelMsg, ChannelRef, DLChannelMsg, DeadLetter, EventsChannel,
