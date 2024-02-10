@@ -50,16 +50,18 @@ pub trait ActorReference {
 
     /// Iterator over children references.
     fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a>;
-
-    /// Send a system message to this actor
-    fn sys_tell(&self, msg: SystemMsg);
 }
 
 pub type BoxedTell<T> = Box<dyn Tell<T> + Send + 'static>;
 
-pub trait Tell<T>: ActorReference + Send + 'static {
+pub trait Tell<T>: ActorReference + SysTell + Send + 'static {
     fn tell(&self, msg: T, sender: Sender);
+    /// Send a system message to this actor
     fn box_clone(&self) -> BoxedTell<T>;
+}
+
+pub trait SysTell: ActorReference + Send  {
+    fn sys_tell(&self, msg: SystemMsg);
 }
 
 impl<T, M> Tell<T> for ActorRef<M>
@@ -73,6 +75,13 @@ where
 
     fn box_clone(&self) -> BoxedTell<T> {
         Box::new((*self).clone())
+    }
+}
+
+impl<M: Message> SysTell for ActorRef<M> {
+    fn sys_tell(&self, msg: SystemMsg) {
+        let envelope = Envelope { sender: None, msg };
+        let _ = self.cell.send_sys_msg(envelope);
     }
 }
 
@@ -124,9 +133,9 @@ where
         (**self).children()
     }
 
-    fn sys_tell(&self, msg: SystemMsg) {
-        (**self).sys_tell(msg)
-    }
+    // fn sys_tell(&self, msg: SystemMsg) {
+    //     (**self).sys_tell(msg)
+    // }
 }
 
 impl<T> PartialEq for BoxedTell<T> {
@@ -253,7 +262,9 @@ impl ActorReference for BasicActorRef {
     fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
         self.cell.children()
     }
+}
 
+impl SysTell for BasicActorRef {
     fn sys_tell(&self, msg: SystemMsg) {
         let envelope = Envelope { msg, sender: None };
         let _ = self.cell.send_sys_msg(envelope);
@@ -304,7 +315,9 @@ impl ActorReference for &BasicActorRef {
     fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
         self.cell.children()
     }
+}
 
+impl SysTell for &BasicActorRef {
     fn sys_tell(&self, msg: SystemMsg) {
         let envelope = Envelope { msg, sender: None };
         let _ = self.cell.send_sys_msg(envelope);
@@ -433,10 +446,10 @@ impl<Msg: Message> ActorReference for ActorRef<Msg> {
         self.cell.children()
     }
 
-    fn sys_tell(&self, msg: SystemMsg) {
-        let envelope = Envelope { msg, sender: None };
-        let _ = self.cell.send_sys_msg(envelope);
-    }
+    // fn sys_tell(&self, msg: SystemMsg) {
+    //     let envelope = Envelope { msg, sender: None };
+    //     let _ = self.cell.send_sys_msg(envelope);
+    // }
 }
 
 impl<Msg: Message> ActorReference for &ActorRef<Msg> {
@@ -483,7 +496,9 @@ impl<Msg: Message> ActorReference for &ActorRef<Msg> {
     fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
         self.cell.children()
     }
+}
 
+impl<M: Message> SysTell for &ActorRef<M> {
     fn sys_tell(&self, msg: SystemMsg) {
         let envelope = Envelope { msg, sender: None };
         let _ = self.cell.send_sys_msg(envelope);
@@ -536,7 +551,7 @@ pub trait ActorRefFactory {
         Args: ActorArgs,
         A: ActorFactoryArgs<Args>;
 
-    fn stop(&self, actor: impl ActorReference);
+    fn stop(&self, actor: impl SysTell);
 }
 
 /// Produces `ActorRef`s under the `temp` guardian actor.

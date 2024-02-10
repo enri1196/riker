@@ -28,6 +28,8 @@ use crate::{
     AnyMessage, Envelope, Message,
 };
 
+use self::actor_ref::SysTell;
+
 #[derive(Clone)]
 pub struct ActorCell {
     inner: Arc<ActorCellInner>,
@@ -107,6 +109,10 @@ impl ActorCell {
 
     pub(crate) fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
         Box::new(self.inner.children.iter())
+    }
+
+    pub(crate) fn system(&self) -> &ActorSystem {
+        &self.inner.system
     }
 
     pub(crate) fn user_root(&self) -> BasicActorRef {
@@ -507,7 +513,7 @@ impl<Msg: Message> ActorRefFactory for Context<Msg> {
         )
     }
 
-    fn stop(&self, actor: impl ActorReference) {
+    fn stop(&self, actor: impl SysTell) {
         actor.sys_tell(SystemCmd::Stop.into());
     }
 }

@@ -12,6 +12,7 @@ use crate::{
     actors::selection::RefSelectionFactory,
 };
 
+use self::actor_ref::SysTell;
 // Public riker::system API (plus the pub data types in this file)
 pub use self::timer::{BasicTimer, ScheduleId, Timer};
 
@@ -565,7 +566,7 @@ impl ActorRefFactory for ActorSystem {
             .create_actor(Props::new_args::<A, _>(args), name, &self.user_root(), self)
     }
 
-    fn stop(&self, actor: impl ActorReference) {
+    fn stop(&self, actor: impl SysTell) {
         actor.sys_tell(SystemCmd::Stop.into());
     }
 }
@@ -604,7 +605,7 @@ impl ActorRefFactory for &ActorSystem {
             .create_actor(Props::new_args::<A, _>(args), name, &self.user_root(), self)
     }
 
-    fn stop(&self, actor: impl ActorReference) {
+    fn stop(&self, actor: impl SysTell) {
         actor.sys_tell(SystemCmd::Stop.into());
     }
 }

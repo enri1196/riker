@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 
 use crate::{
-    actor::{ActorReference, BasicActorRef, Sender},
+    actor::{actor_ref::SysTell, ActorReference, BasicActorRef, Sender},
     system::SystemMsg,
     validate::{validate_path, InvalidPath},
     Message,

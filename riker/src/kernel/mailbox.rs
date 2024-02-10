@@ -18,6 +18,8 @@ use crate::{
     AnyMessage, Envelope, Message,
 };
 
+use self::actor_ref::SysTell;
+
 pub trait MailboxSchedule {
     fn set_scheduled(&self, b: bool);
 
