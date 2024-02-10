@@ -33,7 +33,12 @@ impl Receive<TestProbe> for ScheduleOnce {
     fn receive(&mut self, ctx: &Context<ScheduleOnceMsg>, msg: TestProbe, _sender: Sender) {
         self.probe = Some(msg);
         // reschedule an Empty to be sent to myself()
-        ctx.schedule_once(Duration::from_millis(200), ctx.myself().clone(), None, SomeMessage);
+        ctx.schedule_once(
+            Duration::from_millis(200),
+            ctx.myself().clone(),
+            None,
+            SomeMessage,
+        );
     }
 }
 

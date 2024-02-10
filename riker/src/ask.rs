@@ -2,10 +2,10 @@
 
 use std::sync::{Arc, Mutex};
 
+use crate::actors::*;
 use futures::FutureExt;
 use tokio::sync::oneshot::{channel, Sender as ChannelSender};
 use tokio::task::JoinHandle;
-use crate::actors::*;
 
 /// Convenience fuction to send and receive a message from an actor
 ///

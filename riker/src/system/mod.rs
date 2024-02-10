@@ -7,10 +7,7 @@ use tracing::debug;
 
 use std::fmt;
 
-use crate::{
-    actor::BasicActorRef,
-    actors::selection::RefSelectionFactory,
-};
+use crate::{actor::BasicActorRef, actors::selection::RefSelectionFactory};
 
 use self::actor_ref::SysTell;
 // Public riker::system API (plus the pub data types in this file)

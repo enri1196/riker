@@ -15,8 +15,8 @@ use crate::validate::InvalidName;
 pub use self::{
     actor_cell::Context,
     actor_ref::{
-        ActorRef, ActorRefFactory, ActorReference, BasicActorRef, BoxedTell, Sender, Tell,
-        TmpActorRefFactory, SysTell
+        ActorRef, ActorRefFactory, ActorReference, BasicActorRef, BoxedTell, Sender, SysTell, Tell,
+        TmpActorRefFactory,
     },
     channel::{
         channel, All, Channel, ChannelMsg, ChannelRef, DLChannelMsg, DeadLetter, EventsChannel,
@@ -255,7 +255,7 @@ impl<A: Actor + ?Sized> Actor for Box<A> {
 /// # tokio_test::block_on(async {
 /// let sys = ActorSystem::new().unwrap();
 /// let actor = sys.actor_of::<MyActor>("my-actor").unwrap();
-/// 
+///
 /// actor.tell(Foo, None);
 /// actor.tell(Bar, None);
 /// })

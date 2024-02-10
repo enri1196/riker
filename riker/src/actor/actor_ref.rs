@@ -60,7 +60,7 @@ pub trait Tell<T>: ActorReference + SysTell + Send + 'static {
     fn box_clone(&self) -> BoxedTell<T>;
 }
 
-pub trait SysTell: ActorReference + Send  {
+pub trait SysTell: ActorReference + Send {
     fn sys_tell(&self, msg: SystemMsg);
 }
 

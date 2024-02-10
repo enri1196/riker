@@ -4,7 +4,11 @@ use tracing::trace;
 use std::sync::Arc;
 
 use crate::{
-    actor::{actor_cell::{ActorCell, ExtendedCell}, actor_ref::SysTell, *},
+    actor::{
+        actor_cell::{ActorCell, ExtendedCell},
+        actor_ref::SysTell,
+        *,
+    },
     kernel::{kernel, mailbox::mailbox},
     system::{ActorSystem, SysActors, SystemMsg},
     validate::validate_name,
