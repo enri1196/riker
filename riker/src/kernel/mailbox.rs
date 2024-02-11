@@ -34,7 +34,11 @@ impl From<()> for AnyEnqueueError {
 }
 
 pub trait AnySender: Send + Sync {
-    fn try_any_enqueue(&self, msg: &mut AnyMessage, send_out: Option<BasicActorRef>) -> Result<(), AnyEnqueueError>;
+    fn try_any_enqueue(
+        &self,
+        msg: &mut AnyMessage,
+        send_out: Option<BasicActorRef>,
+    ) -> Result<(), AnyEnqueueError>;
 
     fn set_sched(&self, b: bool);
 
@@ -73,7 +77,11 @@ impl<Msg> AnySender for MailboxSender<Msg>
 where
     Msg: Message,
 {
-    fn try_any_enqueue(&self, msg: &mut AnyMessage, send_out: Option<BasicActorRef>) -> Result<(), AnyEnqueueError> {
+    fn try_any_enqueue(
+        &self,
+        msg: &mut AnyMessage,
+        send_out: Option<BasicActorRef>,
+    ) -> Result<(), AnyEnqueueError> {
         let actual = msg.take().map_err(|_| AnyEnqueueError)?;
         let msg = Envelope {
             msg: actual,
@@ -176,16 +184,14 @@ where
         scheduled: scheduled.clone(),
     };
 
-    let mailbox = MailboxInner {
-        msg_process_limit,
-        queue: qr,
-        sys_queue: sqr,
-        suspended: Arc::new(AtomicBool::new(true)),
-        scheduled,
-    };
-
     let mailbox = Mailbox {
-        inner: Arc::new(mailbox),
+        inner: Arc::new(MailboxInner {
+            msg_process_limit,
+            queue: qr,
+            sys_queue: sqr,
+            suspended: Arc::new(AtomicBool::new(true)),
+            scheduled,
+        }),
     };
 
     (sender, sys_sender, mailbox)
@@ -235,22 +241,16 @@ fn process_msgs<A>(
 {
     let mut count = 0;
 
-    loop {
-        if count < mbox.msg_process_limit() {
-            match mbox.try_dequeue() {
-                Ok(msg) => {
-                    let (msg, send_out) = (msg.msg, msg.send_out);
-                    actor.as_mut().unwrap().recv(ctx, msg, send_out);
-                    process_sys_msgs(&mbox, &ctx, cell, actor);
+    while count < mbox.msg_process_limit() {
+        match mbox.try_dequeue() {
+            Ok(msg) => {
+                let (msg, send_out) = (msg.msg, msg.send_out);
+                actor.as_mut().unwrap().recv(ctx, msg, send_out);
+                process_sys_msgs(&mbox, &ctx, cell, actor);
 
-                    count += 1;
-                }
-                Err(_) => {
-                    break;
-                }
+                count += 1;
             }
-        } else {
-            break;
+            Err(_) => break,
         }
     }
 }
