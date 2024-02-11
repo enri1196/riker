@@ -1,8 +1,7 @@
 use crate::{actors::SystemMsg, Message};
 
 use super::{
-    ActorArgs, ActorFactory, ActorFactoryArgs, ActorPath, ActorRef, ActorUri,
-    BasicActorRef, BoxActorProd, Context, CreateError, Strategy,
+    actor_ref::BoxedTell, ActorArgs, ActorFactory, ActorFactoryArgs, ActorPath, ActorRef, ActorUri, BasicActorRef, BoxActorProd, Context, CreateError, Strategy
 };
 
 pub trait Actor: Send + 'static {
@@ -92,8 +91,6 @@ pub trait ActorReference {
     /// Iterator over children references.
     fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a>;
 }
-
-pub type BoxedTell<T> = Box<dyn Tell<T> + Send + 'static>;
 
 pub trait Tell<T>: ActorReference + SysTell + Send + 'static {
     fn tell(&self, msg: T, send_out: Option<BasicActorRef>);

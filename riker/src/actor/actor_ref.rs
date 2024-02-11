@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt::{self, Debug}, ops::Deref, sync::Arc};
 
 use crate::{
     actor::{
@@ -11,6 +11,45 @@ use crate::{
     AnyMessage, Envelope, Message,
 };
 
+/// A lightweight, typed reference to interact with its underlying
+/// actor instance through concurrent messaging.
+///
+/// All ActorRefs are products of `system.actor_of`
+/// or `context.actor_of`. When an actor is created using `actor_of`
+/// an `ActorRef<Msg>` is returned, where `Msg` is the mailbox
+/// message type for the actor.
+///
+/// Actor references are lightweight and can be cloned without concern
+/// for memory use.
+///
+/// Messages sent to an actor are added to the actor's mailbox.
+///
+/// In the event that the underlying actor is terminated messages sent
+/// to the actor will be routed to dead letters.
+///
+/// If an actor is restarted all existing references continue to
+/// be valid.
+#[derive(Clone)]
+pub struct ActorRef<Msg: Message> {
+    pub cell: ExtendedCell<Msg>,
+}
+
+impl<Msg: Message> ActorRef<Msg> {
+    #[doc(hidden)]
+    pub fn new(cell: ExtendedCell<Msg>) -> ActorRef<Msg> {
+        ActorRef { cell }
+    }
+
+    pub fn send_msg(&self, msg: Msg, send_out: impl Into<Option<BasicActorRef>>) {
+        let envelope = Envelope {
+            msg,
+            send_out: send_out.into(),
+        };
+        // consume the result (we don't return it to user)
+        let _ = self.cell.send_msg(envelope);
+    }
+}
+
 impl<T, M> Tell<T> for ActorRef<M>
 where
     T: Message + Into<M>,
@@ -21,7 +60,7 @@ where
     }
 
     fn box_clone(&self) -> BoxedTell<T> {
-        Box::new((*self).clone())
+        BoxedTell(Arc::new(self.clone()))
     }
 }
 
@@ -32,6 +71,130 @@ impl<M: Message> SysTell for ActorRef<M> {
     }
 }
 
+impl<Msg: Message> ActorReference for ActorRef<Msg> {
+    /// Actor name.
+    ///
+    /// Unique among siblings.
+    fn name(&self) -> &str {
+        self.cell.uri().name.as_ref()
+    }
+
+    fn uri(&self) -> &ActorUri {
+        self.cell.uri()
+    }
+
+    /// Actor path.
+    ///
+    /// e.g. `/user/actor_a/actor_b`
+    fn path(&self) -> &ActorPath {
+        &self.cell.uri().path
+    }
+
+    fn is_root(&self) -> bool {
+        self.cell.is_root()
+    }
+
+    /// Parent reference.
+    fn parent(&self) -> BasicActorRef {
+        self.cell.parent()
+    }
+
+    fn user_root(&self) -> BasicActorRef {
+        self.cell.user_root()
+    }
+
+    fn has_children(&self) -> bool {
+        self.cell.has_children()
+    }
+
+    fn is_child(&self, actor: &BasicActorRef) -> bool {
+        self.cell.is_child(actor)
+    }
+
+    /// Iterator over children references.
+    fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
+        self.cell.children()
+    }
+
+    // fn sys_tell(&self, msg: SystemMsg) {
+    //     let envelope = Envelope { msg, sender: None };
+    //     let _ = self.cell.send_sys_msg(envelope);
+    // }
+}
+
+impl<Msg: Message> ActorReference for &ActorRef<Msg> {
+    /// Actor name.
+    ///
+    /// Unique among siblings.
+    fn name(&self) -> &str {
+        self.cell.uri().name.as_ref()
+    }
+
+    fn uri(&self) -> &ActorUri {
+        self.cell.uri()
+    }
+
+    /// Actor path.
+    ///
+    /// e.g. `/user/actor_a/actor_b`
+    fn path(&self) -> &ActorPath {
+        &self.cell.uri().path
+    }
+
+    fn is_root(&self) -> bool {
+        self.cell.is_root()
+    }
+
+    /// Parent reference.
+    fn parent(&self) -> BasicActorRef {
+        self.cell.parent()
+    }
+
+    fn user_root(&self) -> BasicActorRef {
+        self.cell.user_root()
+    }
+
+    fn has_children(&self) -> bool {
+        self.cell.has_children()
+    }
+
+    fn is_child(&self, actor: &BasicActorRef) -> bool {
+        self.cell.is_child(actor)
+    }
+
+    /// Iterator over children references.
+    fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
+        self.cell.children()
+    }
+}
+
+impl<M: Message> SysTell for &ActorRef<M> {
+    fn sys_tell(&self, msg: SystemMsg) {
+        let envelope = Envelope { msg, send_out: None };
+        let _ = self.cell.send_sys_msg(envelope);
+    }
+}
+
+impl<Msg: Message> fmt::Debug for ActorRef<Msg> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ActorRef[{:?}]", self.uri())
+    }
+}
+
+impl<Msg: Message> fmt::Display for ActorRef<Msg> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ActorRef[{}]", self.uri())
+    }
+}
+
+impl<Msg: Message> PartialEq for ActorRef<Msg> {
+    fn eq(&self, other: &ActorRef<Msg>) -> bool {
+        self.uri().path == other.uri().path
+    }
+}
+
+pub struct BoxedTell<T>(pub Arc<dyn Tell<T> + Send + Sync + 'static>);
+
 impl<T> ActorReference for BoxedTell<T>
 where
     T: Message,
@@ -40,49 +203,59 @@ where
     ///
     /// Unique among siblings.
     fn name(&self) -> &str {
-        (**self).name()
+        self.0.name()
     }
 
     fn uri(&self) -> &ActorUri {
-        (**self).uri()
+        self.0.uri()
     }
 
     /// Actor path.
     ///
     /// e.g. `/user/actor_a/actor_b
     fn path(&self) -> &ActorPath {
-        (**self).path()
+        self.0.path()
     }
 
     fn is_root(&self) -> bool {
-        (**self).is_root()
+        self.0.is_root()
     }
 
     /// Parent reference.
     fn parent(&self) -> BasicActorRef {
-        (**self).parent()
+        self.0.parent()
     }
 
     fn user_root(&self) -> BasicActorRef {
-        (**self).user_root()
+        self.0.user_root()
     }
 
     fn has_children(&self) -> bool {
-        (**self).has_children()
+        self.0.has_children()
     }
 
     fn is_child(&self, actor: &BasicActorRef) -> bool {
-        (**self).is_child(actor)
+        self.0.is_child(actor)
     }
 
     /// Iterator over children references.
     fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
-        (**self).children()
+        self.0.children()
     }
+}
 
-    // fn sys_tell(&self, msg: SystemMsg) {
-    //     (**self).sys_tell(msg)
-    // }
+impl<T: Debug + Clone + Send + 'static> SysTell for BoxedTell<T> {
+    fn sys_tell(&self, msg: SystemMsg) {
+        self.0.sys_tell(msg)
+    }
+}
+
+impl<T> Deref for BoxedTell<T> {
+    type Target = Arc<dyn Tell<T> + Send + Sync + 'static>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl<T> PartialEq for BoxedTell<T> {
@@ -304,166 +477,5 @@ where
 {
     fn from(actor: ActorRef<Msg>) -> Option<BasicActorRef> {
         Some(BasicActorRef::new(ActorCell::from(actor.cell)))
-    }
-}
-
-/// A lightweight, typed reference to interact with its underlying
-/// actor instance through concurrent messaging.
-///
-/// All ActorRefs are products of `system.actor_of`
-/// or `context.actor_of`. When an actor is created using `actor_of`
-/// an `ActorRef<Msg>` is returned, where `Msg` is the mailbox
-/// message type for the actor.
-///
-/// Actor references are lightweight and can be cloned without concern
-/// for memory use.
-///
-/// Messages sent to an actor are added to the actor's mailbox.
-///
-/// In the event that the underlying actor is terminated messages sent
-/// to the actor will be routed to dead letters.
-///
-/// If an actor is restarted all existing references continue to
-/// be valid.
-#[derive(Clone)]
-pub struct ActorRef<Msg: Message> {
-    pub cell: ExtendedCell<Msg>,
-}
-
-impl<Msg: Message> ActorRef<Msg> {
-    #[doc(hidden)]
-    pub fn new(cell: ExtendedCell<Msg>) -> ActorRef<Msg> {
-        ActorRef { cell }
-    }
-
-    pub fn send_msg(&self, msg: Msg, send_out: impl Into<Option<BasicActorRef>>) {
-        let envelope = Envelope {
-            msg,
-            send_out: send_out.into(),
-        };
-        // consume the result (we don't return it to user)
-        let _ = self.cell.send_msg(envelope);
-    }
-}
-
-impl<Msg: Message> ActorReference for ActorRef<Msg> {
-    /// Actor name.
-    ///
-    /// Unique among siblings.
-    fn name(&self) -> &str {
-        self.cell.uri().name.as_ref()
-    }
-
-    fn uri(&self) -> &ActorUri {
-        self.cell.uri()
-    }
-
-    /// Actor path.
-    ///
-    /// e.g. `/user/actor_a/actor_b`
-    fn path(&self) -> &ActorPath {
-        &self.cell.uri().path
-    }
-
-    fn is_root(&self) -> bool {
-        self.cell.is_root()
-    }
-
-    /// Parent reference.
-    fn parent(&self) -> BasicActorRef {
-        self.cell.parent()
-    }
-
-    fn user_root(&self) -> BasicActorRef {
-        self.cell.user_root()
-    }
-
-    fn has_children(&self) -> bool {
-        self.cell.has_children()
-    }
-
-    fn is_child(&self, actor: &BasicActorRef) -> bool {
-        self.cell.is_child(actor)
-    }
-
-    /// Iterator over children references.
-    fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
-        self.cell.children()
-    }
-
-    // fn sys_tell(&self, msg: SystemMsg) {
-    //     let envelope = Envelope { msg, sender: None };
-    //     let _ = self.cell.send_sys_msg(envelope);
-    // }
-}
-
-impl<Msg: Message> ActorReference for &ActorRef<Msg> {
-    /// Actor name.
-    ///
-    /// Unique among siblings.
-    fn name(&self) -> &str {
-        self.cell.uri().name.as_ref()
-    }
-
-    fn uri(&self) -> &ActorUri {
-        self.cell.uri()
-    }
-
-    /// Actor path.
-    ///
-    /// e.g. `/user/actor_a/actor_b`
-    fn path(&self) -> &ActorPath {
-        &self.cell.uri().path
-    }
-
-    fn is_root(&self) -> bool {
-        self.cell.is_root()
-    }
-
-    /// Parent reference.
-    fn parent(&self) -> BasicActorRef {
-        self.cell.parent()
-    }
-
-    fn user_root(&self) -> BasicActorRef {
-        self.cell.user_root()
-    }
-
-    fn has_children(&self) -> bool {
-        self.cell.has_children()
-    }
-
-    fn is_child(&self, actor: &BasicActorRef) -> bool {
-        self.cell.is_child(actor)
-    }
-
-    /// Iterator over children references.
-    fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
-        self.cell.children()
-    }
-}
-
-impl<M: Message> SysTell for &ActorRef<M> {
-    fn sys_tell(&self, msg: SystemMsg) {
-        let envelope = Envelope { msg, send_out: None };
-        let _ = self.cell.send_sys_msg(envelope);
-    }
-}
-
-impl<Msg: Message> fmt::Debug for ActorRef<Msg> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ActorRef[{:?}]", self.uri())
-    }
-}
-
-impl<Msg: Message> fmt::Display for ActorRef<Msg> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ActorRef[{}]", self.uri())
-    }
-}
-
-impl<Msg: Message> PartialEq for ActorRef<Msg> {
-    fn eq(&self, other: &ActorRef<Msg>) -> bool {
-        self.uri().path == other.uri().path
     }
 }

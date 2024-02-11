@@ -1,9 +1,13 @@
+use std::sync::Arc;
+
 use tracing::info;
 
 use crate::actor::{
     Actor, ActorFactoryArgs, ActorRef, All, BasicActorRef, ChannelMsg, Context, DeadLetter,
     Subscribe, Tell,
 };
+
+use super::actor_ref::BoxedTell;
 
 /// Simple actor that subscribes to the dead letters channel and logs using the default logger
 pub struct DeadLetterLogger {
@@ -20,7 +24,7 @@ impl Actor for DeadLetterLogger {
     type Msg = DeadLetter;
 
     fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
-        let sub = Box::new(ctx.myself().clone());
+        let sub = BoxedTell(Arc::new(ctx.myself().clone()));
         self.dl_chan.tell(
             Subscribe {
                 topic: All.into(),
