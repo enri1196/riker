@@ -2,12 +2,14 @@ use std::{collections::HashMap, hash::Hash};
 
 use crate::{
     actor::{
-        Actor, ActorRef, ActorRefFactory, ActorReference, BasicActorRef, BoxedTell, Context,
+        Actor, ActorRef, ActorRefFactory, ActorReference, BasicActorRef, Context,
         CreateError, Receive,
     },
     system::{SystemEvent, SystemMsg},
     Message,
 };
+
+use super::actor_ref::BoxedTell;
 
 type Subs<Msg> = HashMap<Topic, Vec<BoxedTell<Msg>>>;
 

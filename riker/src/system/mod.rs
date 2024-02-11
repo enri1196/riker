@@ -12,6 +12,7 @@ use crate::{
     actors::selection::RefSelectionFactory,
 };
 
+use self::actor_ref::BoxedTell;
 // Public riker::system API (plus the pub data types in this file)
 pub use self::timer::{BasicTimer, ScheduleId, Timer};
 
@@ -915,7 +916,7 @@ impl Actor for ShutdownActor {
     fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         let sub = Subscribe {
             topic: SysTopic::ActorTerminated.into(),
-            actor: Box::new(ctx.myself().clone()),
+            actor: BoxedTell(Arc::new(ctx.myself().clone())),
         };
         ctx.system().sys_events().tell(sub, None);
 

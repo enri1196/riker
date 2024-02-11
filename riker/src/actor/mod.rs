@@ -17,7 +17,7 @@ pub use self::{
     actor_traits::*,
     actor_cell::Context,
     actor_ref::{
-        ActorRef, BasicActorRef,
+        ActorRef, BasicActorRef, BoxedTell
     },
     channel::{
         channel, All, Channel, ChannelMsg, ChannelRef, DLChannelMsg, DeadLetter, EventsChannel,

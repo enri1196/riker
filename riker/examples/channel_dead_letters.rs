@@ -1,7 +1,7 @@
 extern crate riker;
 use riker::actors::*;
 
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 #[derive(Clone, Debug)]
 pub struct SomeMessage;
@@ -40,7 +40,7 @@ impl Actor for DeadLetterActor {
             ctx.myself().name(),
             topic
         );
-        let sub = Box::new(ctx.myself().clone());
+        let sub = BoxedTell(Arc::new(ctx.myself().clone()));
 
         ctx.system()
             .dead_letters()
