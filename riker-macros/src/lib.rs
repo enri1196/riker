@@ -116,7 +116,7 @@ fn receive(aname: &Ident, gen: &Generics, name: &Ident, types: &MsgTypes) -> Tok
         let vname = &t.name;
         let tname = &t.mtype;
         quote! {
-            #name::#vname(msg) => <#aname #ty_generics as Receive<#tname>>::receive(self, ctx, msg, sender),
+            #name::#vname(msg) => <#aname #ty_generics as Receive<#tname>>::receive(self, ctx, msg, send_out),
         }
     });
 
@@ -125,7 +125,7 @@ fn receive(aname: &Ident, gen: &Generics, name: &Ident, types: &MsgTypes) -> Tok
             fn receive(&mut self,
                         ctx: &Context<Self::Msg>,
                         msg: Self::Msg,
-                        sender: Option<BasicActorRef>) {
+                        send_out: Option<BasicActorRef>) {
                 match msg {
                     #(#vars)*
                 }

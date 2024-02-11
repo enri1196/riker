@@ -28,8 +28,6 @@ use crate::{
     AnyMessage, Envelope, Message,
 };
 
-use self::actor_ref::SysTell;
-
 #[derive(Clone)]
 pub struct ActorCell {
     inner: Arc<ActorCellInner>,
@@ -130,12 +128,12 @@ impl ActorCell {
     pub(crate) fn send_any_msg(
         &self,
         msg: &mut AnyMessage,
-        sender: crate::actor::Sender,
+        send_out: Option<BasicActorRef>
     ) -> Result<(), AnyEnqueueError> {
         let mb = &self.inner.mailbox;
         let k = self.kernel();
 
-        dispatch_any(msg, sender, mb, k, &self.inner.system)
+        dispatch_any(msg, send_out, mb, k, &self.inner.system)
     }
 
     pub(crate) fn send_sys_msg(&self, msg: Envelope<SystemMsg>) -> MsgResult<Envelope<SystemMsg>> {
@@ -378,7 +376,7 @@ where
             let dl = e.clone(); // clone the failed message and send to dead letters
             let dl = DeadLetter {
                 msg: format!("{:?}", dl.msg.msg),
-                sender: dl.msg.sender,
+                send_out: dl.msg.send_out,
                 recipient: self.cell.myself(),
             };
 
@@ -582,7 +580,7 @@ where
         initial_delay: Duration,
         interval: Duration,
         receiver: ActorRef<M>,
-        sender: Sender,
+        send_out: Option<BasicActorRef>,
         msg: T,
     ) -> ScheduleId
     where
@@ -597,7 +595,7 @@ where
             send_at: Instant::now() + initial_delay,
             interval,
             receiver: receiver.into(),
-            sender,
+            send_out,
             msg: AnyMessage::new(msg, false),
         };
 
@@ -609,7 +607,7 @@ where
         &self,
         delay: Duration,
         receiver: ActorRef<M>,
-        sender: Sender,
+        send_out: Option<BasicActorRef>,
         msg: T,
     ) -> ScheduleId
     where
@@ -623,7 +621,7 @@ where
             id,
             send_at: Instant::now() + delay,
             receiver: receiver.into(),
-            sender,
+            send_out,
             msg: AnyMessage::new(msg, true),
         };
 
@@ -635,7 +633,7 @@ where
         &self,
         time: DateTime<Utc>,
         receiver: ActorRef<M>,
-        sender: Sender,
+        send_out: Option<BasicActorRef>,
         msg: T,
     ) -> ScheduleId
     where
@@ -652,7 +650,7 @@ where
             id,
             send_at: Instant::now() + delay,
             receiver: receiver.into(),
-            sender,
+            send_out,
             msg: AnyMessage::new(msg, true),
         };
 

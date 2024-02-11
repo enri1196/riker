@@ -23,19 +23,19 @@ impl Actor for Counter {
     // we used the #[actor] attribute so CounterMsg is the Msg type
     type Msg = CounterMsg;
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
     }
 }
 
 impl Receive<TestProbe> for Counter {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, msg: TestProbe, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, msg: TestProbe, _send_out: Option<BasicActorRef>) {
         self.probe = Some(msg)
     }
 }
 
 impl Receive<Add> for Counter {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Add, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Add, _send_out: Option<BasicActorRef>) {
         self.count += 1;
         if self.count == 1_000_000 {
             self.probe.as_ref().unwrap().0.event(())
@@ -136,7 +136,7 @@ impl Actor for Parent {
         self.probe.as_ref().unwrap().0.event(());
     }
 
-    fn recv(&mut self, _ctx: &Context<Self::Msg>, msg: Self::Msg, _sender: Sender) {
+    fn recv(&mut self, _ctx: &Context<Self::Msg>, msg: Self::Msg, _send_out: Option<BasicActorRef>) {
         self.probe = Some(msg);
         self.probe.as_ref().unwrap().0.event(());
     }
@@ -148,7 +148,7 @@ struct Child;
 impl Actor for Child {
     type Msg = ();
 
-    fn recv(&mut self, _: &Context<Self::Msg>, _: Self::Msg, _: Sender) {}
+    fn recv(&mut self, _: &Context<Self::Msg>, _: Self::Msg, _send_out: Option<BasicActorRef>) {}
 }
 
 #[tokio::test]

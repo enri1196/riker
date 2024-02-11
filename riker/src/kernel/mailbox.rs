@@ -18,8 +18,6 @@ use crate::{
     AnyMessage, Envelope, Message,
 };
 
-use self::actor_ref::SysTell;
-
 pub trait MailboxSchedule {
     fn set_scheduled(&self, b: bool);
 
@@ -36,7 +34,7 @@ impl From<()> for AnyEnqueueError {
 }
 
 pub trait AnySender: Send + Sync {
-    fn try_any_enqueue(&self, msg: &mut AnyMessage, sender: Sender) -> Result<(), AnyEnqueueError>;
+    fn try_any_enqueue(&self, msg: &mut AnyMessage, send_out: Option<BasicActorRef>) -> Result<(), AnyEnqueueError>;
 
     fn set_sched(&self, b: bool);
 
@@ -75,11 +73,11 @@ impl<Msg> AnySender for MailboxSender<Msg>
 where
     Msg: Message,
 {
-    fn try_any_enqueue(&self, msg: &mut AnyMessage, sender: Sender) -> Result<(), AnyEnqueueError> {
+    fn try_any_enqueue(&self, msg: &mut AnyMessage, send_out: Option<BasicActorRef>) -> Result<(), AnyEnqueueError> {
         let actual = msg.take().map_err(|_| AnyEnqueueError)?;
         let msg = Envelope {
             msg: actual,
-            sender,
+            send_out,
         };
         self.try_enqueue(msg).map_err(|_| AnyEnqueueError)
     }
@@ -241,8 +239,8 @@ fn process_msgs<A>(
         if count < mbox.msg_process_limit() {
             match mbox.try_dequeue() {
                 Ok(msg) => {
-                    let (msg, sender) = (msg.msg, msg.sender);
-                    actor.as_mut().unwrap().recv(ctx, msg, sender);
+                    let (msg, send_out) = (msg.msg, msg.send_out);
+                    actor.as_mut().unwrap().recv(ctx, msg, send_out);
                     process_sys_msgs(&mbox, &ctx, cell, actor);
 
                     count += 1;
@@ -363,10 +361,10 @@ pub fn flush_to_deadletters<Msg>(mbox: &Mailbox<Msg>, actor: &BasicActorRef, sys
 where
     Msg: Message,
 {
-    while let Ok(Envelope { msg, sender }) = mbox.try_dequeue() {
+    while let Ok(Envelope { msg, send_out }) = mbox.try_dequeue() {
         let dl = DeadLetter {
             msg: format!("{:?}", msg),
-            sender,
+            send_out,
             recipient: actor.clone(),
         };
 

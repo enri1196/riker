@@ -32,8 +32,6 @@ use crate::{
     Message,
 };
 
-use self::actor_ref::SysTell;
-
 pub struct Dock<A: Actor> {
     pub actor: Arc<Mutex<Option<A>>>,
     pub cell: ExtendedCell<A::Msg>,

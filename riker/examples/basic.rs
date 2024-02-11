@@ -9,7 +9,7 @@ struct MyActor;
 impl Actor for MyActor {
     type Msg = String;
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, _sender: Sender) {
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, _send_out: Option<BasicActorRef>) {
         println!("{} received: {}", ctx.myself().name(), msg);
     }
 }

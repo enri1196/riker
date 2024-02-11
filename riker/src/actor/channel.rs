@@ -3,7 +3,7 @@ use std::{collections::HashMap, hash::Hash};
 use crate::{
     actor::{
         Actor, ActorRef, ActorRefFactory, ActorReference, BasicActorRef, BoxedTell, Context,
-        CreateError, Receive, Sender,
+        CreateError, Receive,
     },
     system::{SystemEvent, SystemMsg},
     Message,
@@ -48,14 +48,14 @@ where
         // ctx.myself.tell(msg, None);
     }
 
-    fn recv(&mut self, ctx: &ChannelCtx<Msg>, msg: ChannelMsg<Msg>, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &ChannelCtx<Msg>, msg: ChannelMsg<Msg>, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
     }
 
     // We expect to receive ActorTerminated messages because we subscribed
     // to this system event. This allows us to remove actors that have been
     // terminated but did not explicity unsubscribe before terminating.
-    fn sys_recv(&mut self, _: &ChannelCtx<Msg>, msg: SystemMsg, sender: Sender) {
+    fn sys_recv(&mut self, _: &ChannelCtx<Msg>, msg: SystemMsg, send_out: Option<BasicActorRef>) {
         if let SystemMsg::Event(evt) = msg {
             if let SystemEvent::ActorTerminated(terminated) = evt {
                 let subs = self.subs.clone();
@@ -72,12 +72,12 @@ impl<Msg> Receive<ChannelMsg<Msg>> for Channel<Msg>
 where
     Msg: Message,
 {
-    fn receive(&mut self, ctx: &ChannelCtx<Msg>, msg: Self::Msg, sender: Sender) {
+    fn receive(&mut self, ctx: &ChannelCtx<Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
         match msg {
-            ChannelMsg::Publish(p) => self.receive(ctx, p, sender),
-            ChannelMsg::Subscribe(sub) => self.receive(ctx, sub, sender),
-            ChannelMsg::Unsubscribe(unsub) => self.receive(ctx, unsub, sender),
-            ChannelMsg::UnsubscribeAll(unsub) => self.receive(ctx, unsub, sender),
+            ChannelMsg::Publish(p) => self.receive(ctx, p, send_out),
+            ChannelMsg::Subscribe(sub) => self.receive(ctx, sub, send_out),
+            ChannelMsg::Unsubscribe(unsub) => self.receive(ctx, unsub, send_out),
+            ChannelMsg::UnsubscribeAll(unsub) => self.receive(ctx, unsub, send_out),
         }
     }
 }
@@ -86,7 +86,7 @@ impl<Msg> Receive<Subscribe<Msg>> for Channel<Msg>
 where
     Msg: Message,
 {
-    fn receive(&mut self, ctx: &ChannelCtx<Msg>, msg: Subscribe<Msg>, sender: Sender) {
+    fn receive(&mut self, ctx: &ChannelCtx<Msg>, msg: Subscribe<Msg>, send_out: Option<BasicActorRef>) {
         let subs = self.subs.entry(msg.topic).or_default();
         subs.push(msg.actor);
     }
@@ -96,7 +96,7 @@ impl<Msg> Receive<Unsubscribe<Msg>> for Channel<Msg>
 where
     Msg: Message,
 {
-    fn receive(&mut self, ctx: &ChannelCtx<Msg>, msg: Unsubscribe<Msg>, sender: Sender) {
+    fn receive(&mut self, ctx: &ChannelCtx<Msg>, msg: Unsubscribe<Msg>, send_out: Option<BasicActorRef>) {
         unsubscribe(&mut self.subs, &msg.topic, &msg.actor);
     }
 }
@@ -105,7 +105,7 @@ impl<Msg> Receive<UnsubscribeAll<Msg>> for Channel<Msg>
 where
     Msg: Message,
 {
-    fn receive(&mut self, ctx: &ChannelCtx<Msg>, msg: UnsubscribeAll<Msg>, sender: Sender) {
+    fn receive(&mut self, ctx: &ChannelCtx<Msg>, msg: UnsubscribeAll<Msg>, send_out: Option<BasicActorRef>) {
         let subs = self.subs.clone();
 
         for topic in subs.keys() {
@@ -118,18 +118,18 @@ impl<Msg> Receive<Publish<Msg>> for Channel<Msg>
 where
     Msg: Message,
 {
-    fn receive(&mut self, ctx: &ChannelCtx<Msg>, msg: Publish<Msg>, sender: Sender) {
+    fn receive(&mut self, ctx: &ChannelCtx<Msg>, msg: Publish<Msg>, send_out: Option<BasicActorRef>) {
         // send system event to actors subscribed to all topics
         if let Some(subs) = self.subs.get(&All.into()) {
             for sub in subs.iter() {
-                sub.tell(msg.msg.clone(), sender.clone());
+                sub.tell(msg.msg.clone(), send_out.clone());
             }
         }
 
         // send system event to actors subscribed to the topic
         if let Some(subs) = self.subs.get(&msg.topic) {
             for sub in subs.iter() {
-                sub.tell(msg.msg.clone(), sender.clone());
+                sub.tell(msg.msg.clone(), send_out.clone());
             }
         }
     }
@@ -164,25 +164,25 @@ impl Actor for EventsChannel {
         &mut self,
         ctx: &ChannelCtx<SystemEvent>,
         msg: ChannelMsg<SystemEvent>,
-        sender: Sender,
+        send_out: Option<BasicActorRef>,
     ) {
-        self.receive(ctx, msg, sender);
+        self.receive(ctx, msg, send_out);
     }
 
-    fn sys_recv(&mut self, ctx: &ChannelCtx<SystemEvent>, msg: SystemMsg, sender: Sender) {
-        self.0.sys_recv(ctx, msg, sender);
+    fn sys_recv(&mut self, ctx: &ChannelCtx<SystemEvent>, msg: SystemMsg, send_out: Option<BasicActorRef>) {
+        self.0.sys_recv(ctx, msg, send_out);
     }
 }
 
 impl Receive<ChannelMsg<SystemEvent>> for EventsChannel {
-    fn receive(&mut self, ctx: &ChannelCtx<SystemEvent>, msg: Self::Msg, sender: Sender) {
+    fn receive(&mut self, ctx: &ChannelCtx<SystemEvent>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
         // Publish variant uses specialized EventsChannel Receive
         // All other variants use the wrapped Channel (self.0) Receive(s)
         match msg {
-            ChannelMsg::Publish(p) => self.receive(ctx, p, sender),
-            ChannelMsg::Subscribe(sub) => self.0.receive(ctx, sub, sender),
-            ChannelMsg::Unsubscribe(unsub) => self.0.receive(ctx, unsub, sender),
-            ChannelMsg::UnsubscribeAll(unsub) => self.0.receive(ctx, unsub, sender),
+            ChannelMsg::Publish(p) => self.receive(ctx, p, send_out),
+            ChannelMsg::Subscribe(sub) => self.0.receive(ctx, sub, send_out),
+            ChannelMsg::Unsubscribe(unsub) => self.0.receive(ctx, unsub, send_out),
+            ChannelMsg::UnsubscribeAll(unsub) => self.0.receive(ctx, unsub, send_out),
         }
     }
 }
@@ -192,7 +192,7 @@ impl Receive<Publish<SystemEvent>> for EventsChannel {
         &mut self,
         ctx: &ChannelCtx<SystemEvent>,
         msg: Publish<SystemEvent>,
-        sender: Sender,
+        send_out: Option<BasicActorRef>,
     ) {
         // send system event to actors subscribed to all topics
         if let Some(subs) = self.0.subs.get(&All.into()) {
@@ -218,7 +218,7 @@ pub type DLChannelMsg = ChannelMsg<DeadLetter>;
 #[derive(Clone, Debug)]
 pub struct DeadLetter {
     pub msg: String,
-    pub sender: Sender,
+    pub send_out: Option<BasicActorRef>,
     pub recipient: BasicActorRef,
 }
 

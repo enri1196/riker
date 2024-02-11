@@ -12,7 +12,7 @@ struct DumbActor;
 impl Actor for DumbActor {
     type Msg = ();
 
-    fn recv(&mut self, _: &Context<Self::Msg>, _: Self::Msg, _: Sender) {}
+    fn recv(&mut self, _: &Context<Self::Msg>, _: Self::Msg, _send_out: Option<BasicActorRef>) {}
 }
 
 #[actor(Panic)]
@@ -32,13 +32,13 @@ impl Actor for PanicActor {
         ctx.actor_of::<DumbActor>("child_d").unwrap();
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
     }
 }
 
 impl Receive<Panic> for PanicActor {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Panic, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Panic, _send_out: Option<BasicActorRef>) {
         panic!("// TEST PANIC // TEST PANIC // TEST PANIC //");
     }
 }
@@ -60,8 +60,8 @@ impl Actor for EscalateSup {
         Strategy::Escalate
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
         // match msg {
         //     // We just resend the messages to the actor that we're concerned about testing
         //     TestMsg::Panic => self.actor_to_fail.try_tell(msg, None).unwrap(),
@@ -71,7 +71,7 @@ impl Actor for EscalateSup {
 }
 
 impl Receive<Panic> for EscalateSup {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Panic, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Panic, _send_out: Option<BasicActorRef>) {
         self.actor_to_fail.as_ref().unwrap().tell(Panic, None);
     }
 }
@@ -93,8 +93,8 @@ impl Actor for EscRestartSup {
         Strategy::Restart
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
         // match msg {
         //     // We resend the messages to the parent of the actor that is/has panicked
         //     TestMsg::Panic => self.escalator.try_tell(msg, None).unwrap(),
@@ -104,7 +104,7 @@ impl Actor for EscRestartSup {
 }
 
 impl Receive<Panic> for EscRestartSup {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Panic, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Panic, _send_out: Option<BasicActorRef>) {
         self.escalator.as_ref().unwrap().tell(Panic, None);
     }
 }

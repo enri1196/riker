@@ -11,20 +11,20 @@ impl Actor for NewActor {
         Strategy::Stop
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
         ctx.stop(ctx.myself());
     }
 }
 
 impl Receive<u32> for NewActor {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: u32, _sender: Option<BasicActorRef>) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: u32, _send_out: Option<BasicActorRef>) {
         println!("u32");
     }
 }
 
 impl Receive<String> for NewActor {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: String, _sender: Option<BasicActorRef>) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: String, _send_out: Option<BasicActorRef>) {
         println!("String");
     }
 }
@@ -62,14 +62,14 @@ impl<A: Send + 'static, B: Send + 'static> Actor for GenericActor<A, B> {
         Strategy::Stop
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
         ctx.stop(ctx.myself());
     }
 }
 
 impl<A: Send + 'static, B: Send + 'static> Receive<String> for GenericActor<A, B> {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: String, _sender: Option<BasicActorRef>) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: String, _send_out: Option<BasicActorRef>) {
         println!("String");
     }
 }
@@ -106,8 +106,8 @@ impl Actor for GenericMsgActor {
         Strategy::Stop
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
         ctx.stop(ctx.myself());
     }
 }
@@ -162,8 +162,8 @@ impl Actor for PathMsgActor {
         Strategy::Stop
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
         ctx.stop(ctx.myself());
     }
 }

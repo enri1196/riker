@@ -33,13 +33,13 @@ impl Actor for GpsActor {
         self.chan.tell(Subscribe { actor: sub, topic }, None);
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
     }
 }
 
 impl Receive<PowerStatus> for GpsActor {
-    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: PowerStatus, _sender: Sender) {
+    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: PowerStatus, _send_out: Option<BasicActorRef>) {
         println!("{}: -> got msg: {:?}", ctx.myself().name(), msg);
     }
 }
@@ -70,13 +70,13 @@ impl Actor for NavigationActor {
         self.chan.tell(Subscribe { actor: sub, topic }, None);
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
     }
 }
 
 impl Receive<PowerStatus> for NavigationActor {
-    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: PowerStatus, _sender: Sender) {
+    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: PowerStatus, _send_out: Option<BasicActorRef>) {
         println!("{}: -> got msg: {:?}", ctx.myself().name(), msg);
     }
 }

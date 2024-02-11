@@ -34,7 +34,7 @@ impl Props {
     ///
     /// # impl Actor for User {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _sender: Sender) {}
+    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
@@ -76,7 +76,7 @@ impl Props {
     ///
     /// # impl Actor for User {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _sender: Sender) {}
+    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
@@ -107,7 +107,7 @@ impl Props {
     ///
     /// # impl Actor for BankAccount {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _sender: Sender) {}
+    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
@@ -145,7 +145,7 @@ impl Props {
     ///
     /// # impl Actor for User {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _sender: Sender) {}
+    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
@@ -174,7 +174,7 @@ impl Props {
     ///
     /// # impl Actor for User {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _sender: Sender) {}
+    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
@@ -215,7 +215,7 @@ impl Props {
     ///
     /// # impl Actor for User {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _sender: Sender) {}
+    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
@@ -246,7 +246,7 @@ impl Props {
     ///
     /// # impl Actor for BankAccount {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _sender: Sender) {}
+    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
