@@ -24,13 +24,13 @@ struct ScheduleOnce {
 impl Actor for ScheduleOnce {
     type Msg = ScheduleOnceMsg;
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
     }
 }
 
 impl Receive<TestProbe> for ScheduleOnce {
-    fn receive(&mut self, ctx: &Context<ScheduleOnceMsg>, msg: TestProbe, _sender: Sender) {
+    fn receive(&mut self, ctx: &Context<ScheduleOnceMsg>, msg: TestProbe, _send_out: Option<BasicActorRef>) {
         self.probe = Some(msg);
         // reschedule an Empty to be sent to myself()
         ctx.schedule_once(
@@ -43,7 +43,7 @@ impl Receive<TestProbe> for ScheduleOnce {
 }
 
 impl Receive<SomeMessage> for ScheduleOnce {
-    fn receive(&mut self, _ctx: &Context<ScheduleOnceMsg>, _msg: SomeMessage, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<ScheduleOnceMsg>, _msg: SomeMessage, _send_out: Option<BasicActorRef>) {
         self.probe.as_ref().unwrap().0.event(());
     }
 }
@@ -87,13 +87,13 @@ struct ScheduleRepeat {
 impl Actor for ScheduleRepeat {
     type Msg = ScheduleRepeatMsg;
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
     }
 }
 
 impl Receive<TestProbe> for ScheduleRepeat {
-    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: TestProbe, _sender: Sender) {
+    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: TestProbe, _send_out: Option<BasicActorRef>) {
         self.probe = Some(msg);
         // schedule Message to be repeatedly sent to myself
         // and store the job id to cancel it later
@@ -109,7 +109,7 @@ impl Receive<TestProbe> for ScheduleRepeat {
 }
 
 impl Receive<SomeMessage> for ScheduleRepeat {
-    fn receive(&mut self, ctx: &Context<Self::Msg>, _msg: SomeMessage, _sender: Sender) {
+    fn receive(&mut self, ctx: &Context<Self::Msg>, _msg: SomeMessage, _send_out: Option<BasicActorRef>) {
         if self.counter == 5 {
             ctx.cancel_schedule(self.schedule_id.unwrap());
             self.probe.as_ref().unwrap().0.event(());

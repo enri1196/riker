@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 
 use crate::{
-    actor::{actor_ref::SysTell, ActorReference, BasicActorRef, Sender},
+    actor::{ActorReference, BasicActorRef, SysTell},
     system::SystemMsg,
     validate::{validate_path, InvalidPath},
     Message,
@@ -75,7 +75,7 @@ impl ActorSelection {
             // dl: &BasicActorRef,
             mut path_vec: Peekable<I>,
             msg: Msg,
-            sender: &Sender,
+            send_out: &Option<BasicActorRef>,
             path: &str,
         ) where
             I: Iterator<Item = &'a Selection>,
@@ -87,21 +87,21 @@ impl ActorSelection {
                 Some(&Selection::Parent) => {
                     if path_vec.peek().is_none() {
                         let parent = anchor.parent();
-                        let _ = parent.try_tell(msg, sender.clone());
+                        let _ = parent.try_tell(msg, send_out.clone());
                     } else {
-                        walk(&anchor.parent(), path_vec, msg, sender, path);
+                        walk(&anchor.parent(), path_vec, msg, send_out, path);
                     }
                 }
                 Some(&Selection::AllChildren) => {
                     for child in anchor.children() {
-                        let _ = child.try_tell(msg.clone(), sender.clone());
+                        let _ = child.try_tell(msg.clone(), send_out.clone());
                     }
                 }
                 Some(&Selection::ChildName(ref name)) => {
                     let child = anchor.children().filter(|c| c.name() == name).last();
                     if path_vec.peek().is_none() {
                         if let Some(actor_ref) = child {
-                            actor_ref.try_tell(msg, sender.clone()).unwrap();
+                            actor_ref.try_tell(msg, send_out.clone()).unwrap();
                         }
                     } else if path_vec.peek().is_some() && child.is_some() {
                         walk(
@@ -109,7 +109,7 @@ impl ActorSelection {
                             // dl,
                             path_vec,
                             msg,
-                            sender,
+                            send_out,
                             path,
                         );
                     } else {
@@ -136,7 +136,7 @@ impl ActorSelection {
             // dl: &BasicActorRef,
             mut path_vec: Peekable<I>,
             msg: SystemMsg,
-            sender: &Sender,
+            send_out: &Option<BasicActorRef>,
             path: &str,
         ) where
             I: Iterator<Item = &'a Selection>,
@@ -149,7 +149,7 @@ impl ActorSelection {
                         let parent = anchor.parent();
                         parent.sys_tell(msg);
                     } else {
-                        walk(&anchor.parent(), path_vec, msg, sender, path);
+                        walk(&anchor.parent(), path_vec, msg, send_out, path);
                     }
                 }
                 Some(&Selection::AllChildren) => {
@@ -161,7 +161,7 @@ impl ActorSelection {
                     let child = anchor.children().filter(|c| c.name() == name).last();
                     if path_vec.peek().is_none() {
                         if let Some(actor_ref) = child {
-                            actor_ref.try_tell(msg, sender.clone()).unwrap();
+                            actor_ref.try_tell(msg, send_out.clone()).unwrap();
                         }
                     } else if path_vec.peek().is_some() && child.is_some() {
                         walk(
@@ -169,7 +169,7 @@ impl ActorSelection {
                             // dl,
                             path_vec,
                             msg,
-                            sender,
+                            send_out,
                             path,
                         );
                     } else {

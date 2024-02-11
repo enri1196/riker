@@ -37,9 +37,9 @@ use tokio::task::JoinHandle;
 ///    fn recv(&mut self,
 ///                 ctx: &Context<Self::Msg>,
 ///                 msg: Self::Msg,
-///                 sender: Sender) {
+///                 send_out: Option<BasicActorRef>) {
 ///         // reply to the temporary ask actor
-///         sender.as_ref().unwrap().try_tell(
+///         send_out.as_ref().unwrap().try_tell(
 ///             format!("Hello {}", msg), None
 ///         ).unwrap();
 ///     }
@@ -106,7 +106,7 @@ impl<Msg: Message> AskActor<Msg> {
 impl<Msg: Message> Actor for AskActor<Msg> {
     type Msg = Msg;
 
-    fn recv(&mut self, ctx: &Context<Msg>, msg: Msg, _: Sender) {
+    fn recv(&mut self, ctx: &Context<Msg>, msg: Msg, _: Option<BasicActorRef>) {
         if let Ok(mut tx) = self.tx.lock() {
             tx.take().unwrap().send(msg).unwrap();
         }

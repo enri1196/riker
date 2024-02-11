@@ -17,7 +17,7 @@ struct Child;
 impl Actor for Child {
     type Msg = TestProbe;
 
-    fn recv(&mut self, _ctx: &Context<Self::Msg>, msg: Self::Msg, _sender: Sender) {
+    fn recv(&mut self, _ctx: &Context<Self::Msg>, msg: Self::Msg, _send_out: Option<BasicActorRef>) {
         msg.0.event(());
     }
 }
@@ -36,7 +36,7 @@ impl Actor for SelectTest {
         let _ = ctx.actor_of::<Child>("child_b").unwrap();
     }
 
-    fn recv(&mut self, _ctx: &Context<Self::Msg>, msg: Self::Msg, _sender: Sender) {
+    fn recv(&mut self, _ctx: &Context<Self::Msg>, msg: Self::Msg, _send_out: Option<BasicActorRef>) {
         msg.0.event(());
     }
 }
@@ -120,7 +120,7 @@ impl Actor for SelectTest2 {
         let _ = ctx.actor_of::<Child>("child_b").unwrap();
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, _sender: Sender) {
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, _send_out: Option<BasicActorRef>) {
         // up and down: ../select-actor/child_a
         let sel = ctx.select("../select-actor/child_a").unwrap();
         sel.try_tell(msg.clone(), None);

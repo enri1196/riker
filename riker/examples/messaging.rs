@@ -30,26 +30,26 @@ impl Actor for Counter {
     // we used the #[actor] attribute so CounterMsg is the Msg type
     type Msg = CounterMsg;
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
         // Use the respective Receive<T> implementation
-        self.receive(ctx, msg, sender);
+        self.receive(ctx, msg, send_out);
     }
 }
 
 impl Receive<Add> for Counter {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Add, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Add, _send_out: Option<BasicActorRef>) {
         self.count += 1;
     }
 }
 
 impl Receive<Sub> for Counter {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Sub, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Sub, _send_out: Option<BasicActorRef>) {
         self.count -= 1;
     }
 }
 
 impl Receive<Print> for Counter {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Print, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Print, _send_out: Option<BasicActorRef>) {
         println!("Total counter value: {}", self.count);
     }
 }

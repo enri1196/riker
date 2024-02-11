@@ -9,7 +9,7 @@ struct Child;
 impl Actor for Child {
     type Msg = String;
 
-    fn recv(&mut self, _ctx: &Context<Self::Msg>, msg: Self::Msg, _sender: Sender) {
+    fn recv(&mut self, _ctx: &Context<Self::Msg>, msg: Self::Msg, _send_out: Option<BasicActorRef>) {
         println!("child got a message {}", msg);
     }
 }
@@ -27,9 +27,9 @@ impl Actor for MyActor {
         self.child = Some(ctx.actor_of::<Child>("my-child").unwrap());
     }
 
-    fn recv(&mut self, _ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
+    fn recv(&mut self, _ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
         println!("parent got a message {}", msg);
-        self.child.as_ref().unwrap().tell(msg, sender);
+        self.child.as_ref().unwrap().tell(msg, send_out);
     }
 }
 

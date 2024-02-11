@@ -9,7 +9,6 @@ use std::fmt;
 
 use crate::{actor::BasicActorRef, actors::selection::RefSelectionFactory};
 
-use self::actor_ref::SysTell;
 // Public riker::system API (plus the pub data types in this file)
 pub use self::timer::{BasicTimer, ScheduleId, Timer};
 
@@ -717,7 +716,7 @@ impl Timer for ActorSystem {
         initial_delay: Duration,
         interval: Duration,
         receiver: ActorRef<M>,
-        sender: Sender,
+        send_out: Option<BasicActorRef>,
         msg: T,
     ) -> ScheduleId
     where
@@ -732,7 +731,7 @@ impl Timer for ActorSystem {
             send_at: Instant::now() + initial_delay,
             interval,
             receiver: receiver.into(),
-            sender,
+            send_out,
             msg: AnyMessage::new(msg, false),
         };
 
@@ -744,7 +743,7 @@ impl Timer for ActorSystem {
         &self,
         delay: Duration,
         receiver: ActorRef<M>,
-        sender: Sender,
+        send_out: Option<BasicActorRef>,
         msg: T,
     ) -> ScheduleId
     where
@@ -758,7 +757,7 @@ impl Timer for ActorSystem {
             id,
             send_at: Instant::now() + delay,
             receiver: receiver.into(),
-            sender,
+            send_out,
             msg: AnyMessage::new(msg, true),
         };
 
@@ -770,7 +769,7 @@ impl Timer for ActorSystem {
         &self,
         time: DateTime<Utc>,
         receiver: ActorRef<M>,
-        sender: Sender,
+        send_out: Option<BasicActorRef>,
         msg: T,
     ) -> ScheduleId
     where
@@ -787,7 +786,7 @@ impl Timer for ActorSystem {
             id,
             send_at: Instant::now() + delay,
             receiver: receiver.into(),
-            sender,
+            send_out,
             msg: AnyMessage::new(msg, true),
         };
 

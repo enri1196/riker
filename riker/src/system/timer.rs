@@ -9,7 +9,7 @@ use config::Config;
 use uuid::Uuid;
 
 use crate::{
-    actor::{ActorRef, BasicActorRef, Sender},
+    actor::{ActorRef, BasicActorRef},
     AnyMessage, Message,
 };
 
@@ -23,7 +23,7 @@ pub trait Timer {
         initial_delay: Duration,
         interval: Duration,
         receiver: ActorRef<M>,
-        sender: Sender,
+        send_out: Option<BasicActorRef>,
         msg: T,
     ) -> ScheduleId
     where
@@ -34,7 +34,7 @@ pub trait Timer {
         &self,
         delay: Duration,
         receiver: ActorRef<M>,
-        sender: Sender,
+        send_out: Option<BasicActorRef>,
         msg: T,
     ) -> ScheduleId
     where
@@ -45,7 +45,7 @@ pub trait Timer {
         &self,
         time: DateTime<Utc>,
         receiver: ActorRef<M>,
-        sender: Sender,
+        send_out: Option<BasicActorRef>,
         msg: T,
     ) -> ScheduleId
     where
@@ -65,13 +65,13 @@ pub struct OnceJob {
     pub id: Uuid,
     pub send_at: Instant,
     pub receiver: BasicActorRef,
-    pub sender: Sender,
+    pub send_out: Option<BasicActorRef>,
     pub msg: AnyMessage,
 }
 
 impl OnceJob {
     pub fn send(mut self) {
-        let _ = self.receiver.try_tell_any(&mut self.msg, self.sender);
+        let _ = self.receiver.try_tell_any(&mut self.msg, self.send_out);
     }
 }
 
@@ -80,7 +80,7 @@ pub struct RepeatJob {
     pub send_at: Instant,
     pub interval: Duration,
     pub receiver: BasicActorRef,
-    pub sender: Sender,
+    pub send_out: Option<BasicActorRef>,
     pub msg: AnyMessage,
 }
 
@@ -88,7 +88,7 @@ impl RepeatJob {
     pub fn send(&mut self) {
         let _ = self
             .receiver
-            .try_tell_any(&mut self.msg, self.sender.clone());
+            .try_tell_any(&mut self.msg, self.send_out.clone());
     }
 }
 

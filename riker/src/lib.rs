@@ -47,7 +47,7 @@ pub fn load_config() -> Config {
 /// Wraps message and sender
 #[derive(Debug, Clone)]
 pub struct Envelope<T: Message> {
-    pub sender: Option<BasicActorRef>,
+    pub send_out: Option<BasicActorRef>,
     pub msg: T,
 }
 

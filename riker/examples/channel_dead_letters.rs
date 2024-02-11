@@ -13,13 +13,13 @@ struct DumbActor;
 impl Actor for DumbActor {
     type Msg = DumbActorMsg;
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
     }
 }
 
 impl Receive<SomeMessage> for DumbActor {
-    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: SomeMessage, _sender: Sender) {
+    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: SomeMessage, _send_out: Option<BasicActorRef>) {
         println!("{}: -> got msg: {:?} ", ctx.myself().name(), msg);
     }
 }
@@ -47,13 +47,13 @@ impl Actor for DeadLetterActor {
             .tell(Subscribe { actor: sub, topic }, None);
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
     }
 }
 
 impl Receive<DeadLetter> for DeadLetterActor {
-    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: DeadLetter, _sender: Sender) {
+    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: DeadLetter, _send_out: Option<BasicActorRef>) {
         println!("{}: -> got msg: {:?} ", ctx.myself().name(), msg);
     }
 }

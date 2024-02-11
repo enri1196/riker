@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 
 use crate::{
-    actor::{MsgError, MsgResult},
+    actor::{BasicActorRef, MsgError, MsgResult},
     actors::Run,
     kernel::{
         mailbox::{AnyEnqueueError, AnySender, MailboxSchedule, MailboxSender},
@@ -67,12 +67,12 @@ where
 
 pub fn dispatch_any(
     msg: &mut AnyMessage,
-    sender: crate::actor::Sender,
+    send_out: Option<BasicActorRef>,
     mbox: &Arc<dyn AnySender>,
     kernel: &KernelRef,
     sys: &ActorSystem,
 ) -> Result<(), AnyEnqueueError> {
-    mbox.try_any_enqueue(msg, sender).map(|_| {
+    mbox.try_any_enqueue(msg, send_out).map(|_| {
         if !mbox.is_sched() {
             mbox.set_sched(true);
             kernel.schedule(sys);

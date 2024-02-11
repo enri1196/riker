@@ -12,7 +12,7 @@ struct Child;
 impl Actor for Child {
     type Msg = String;
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, _sender: Sender) {
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, _send_out: Option<BasicActorRef>) {
         println!("{}: {:?} -> got msg: {}", ctx.myself().name(), self, msg);
     }
 }
@@ -31,7 +31,7 @@ impl Actor for SelectTest {
         let _ = ctx.actor_of::<Child>("child_b").unwrap();
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, _sender: Sender) {
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, _send_out: Option<BasicActorRef>) {
         println!("{}: {:?} -> got msg: {}", ctx.myself().name(), self, msg);
         // up and down: ../select-actor/child_a
         let path = "../select-actor/child_a";

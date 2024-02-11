@@ -33,7 +33,7 @@ impl Actor for DeadLetterLogger {
     fn recv(&mut self, _: &Context<Self::Msg>, msg: Self::Msg, _: Option<BasicActorRef>) {
         info!(
             "DeadLetter: {:?} => {:?} ({:?})",
-            msg.sender, msg.recipient, msg.msg
+            msg.send_out, msg.recipient, msg.msg
         )
     }
 }

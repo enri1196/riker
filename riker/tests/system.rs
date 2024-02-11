@@ -36,7 +36,7 @@ impl Actor for ShutdownTest {
         }
     }
 
-    fn recv(&mut self, _: &Context<Self::Msg>, _: Self::Msg, _: Sender) {}
+    fn recv(&mut self, _: &Context<Self::Msg>, _: Self::Msg, _send_out: Option<BasicActorRef>) {}
 }
 
 #[tokio::test]

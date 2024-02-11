@@ -9,11 +9,11 @@ struct Child;
 impl Actor for Child {
     type Msg = String;
 
-    fn recv(&mut self, _ctx: &Context<Self::Msg>, msg: Self::Msg, _sender: Sender) {
+    fn recv(&mut self, _ctx: &Context<Self::Msg>, msg: Self::Msg, _send_out: Option<BasicActorRef>) {
         println!("child got a message {}", msg);
     }
 
-    fn sys_recv(&mut self, ctx: &Context<Self::Msg>, msg: SystemMsg, _sender: Sender) {
+    fn sys_recv(&mut self, ctx: &Context<Self::Msg>, msg: SystemMsg, _send_out: Option<BasicActorRef>) {
         if let SystemMsg::Command(cmd) = msg {
             match cmd {
                 SystemCmd::Stop => ctx.system().stop(ctx.myself()),
@@ -42,14 +42,14 @@ impl Actor for MyActor {
         self.child = Some(ctx.actor_of::<Child>("my-child").unwrap());
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
         match msg {
             Command::KillChild(path) => {
                 ctx.select_ref(path.as_str()).map(|b_act| ctx.stop(&b_act));
             }
             Command::Other(inner_msg) => {
                 println!("parent got a message {}", inner_msg);
-                self.child.as_ref().unwrap().tell(inner_msg, sender);
+                self.child.as_ref().unwrap().tell(inner_msg, send_out);
             }
         }
     }

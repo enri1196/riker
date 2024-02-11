@@ -13,13 +13,13 @@ struct DumbActor;
 impl Actor for DumbActor {
     type Msg = DumbActorMsg;
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
     }
 }
 
 impl Receive<Panic> for DumbActor {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Panic, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Panic, _send_out: Option<BasicActorRef>) {
         panic!("// TEST PANIC // TEST PANIC // TEST PANIC //");
     }
 }
@@ -51,19 +51,19 @@ impl Actor for SystemActor {
         );
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
     }
 
-    fn sys_recv(&mut self, ctx: &Context<Self::Msg>, msg: SystemMsg, sender: Sender) {
+    fn sys_recv(&mut self, ctx: &Context<Self::Msg>, msg: SystemMsg, send_out: Option<BasicActorRef>) {
         if let SystemMsg::Event(evt) = msg {
-            self.receive(ctx, evt, sender);
+            self.receive(ctx, evt, send_out);
         }
     }
 }
 
 impl Receive<SystemEvent> for SystemActor {
-    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: SystemEvent, _sender: Sender) {
+    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: SystemEvent, _send_out: Option<BasicActorRef>) {
         print!("{}: -> got system msg: {:?} ", ctx.myself().name(), msg);
         match msg {
             SystemEvent::ActorCreated(created) => {

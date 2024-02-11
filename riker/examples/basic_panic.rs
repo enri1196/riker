@@ -12,7 +12,7 @@ struct DumbActor;
 impl Actor for DumbActor {
     type Msg = ();
 
-    fn recv(&mut self, _: &Context<Self::Msg>, _: Self::Msg, _: Sender) {}
+    fn recv(&mut self, _: &Context<Self::Msg>, _: Self::Msg, _send_out: Option<BasicActorRef>) {}
 }
 
 #[actor(Panic)]
@@ -32,13 +32,13 @@ impl Actor for PanicActor {
         ctx.actor_of::<DumbActor>("child_d").unwrap();
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
     }
 }
 
 impl Receive<Panic> for PanicActor {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Panic, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Panic, _send_out: Option<BasicActorRef>) {
         panic!("// TEST PANIC // TEST PANIC // TEST PANIC //");
     }
 }

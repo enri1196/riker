@@ -44,20 +44,20 @@ impl Actor for Subscriber {
         );
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
     }
 }
 
 impl Receive<TestProbe> for Subscriber {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, msg: TestProbe, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, msg: TestProbe, _send_out: Option<BasicActorRef>) {
         msg.0.event(());
         self.probe = Some(msg);
     }
 }
 
 impl Receive<SomeMessage> for Subscriber {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: SomeMessage, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: SomeMessage, _send_out: Option<BasicActorRef>) {
         self.probe.as_ref().unwrap().0.event(());
     }
 }
@@ -157,19 +157,19 @@ struct DumbActor;
 impl Actor for DumbActor {
     type Msg = DumbActorMsg;
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
     }
 }
 
 impl Receive<Panic> for DumbActor {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Panic, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Panic, _send_out: Option<BasicActorRef>) {
         panic!("// TEST PANIC // TEST PANIC // TEST PANIC //");
     }
 }
 
 impl Receive<SomeMessage> for DumbActor {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: SomeMessage, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: SomeMessage, _send_out: Option<BasicActorRef>) {
 
         // Intentionally left blank
     }
@@ -202,26 +202,26 @@ impl Actor for EventSubscriber {
         );
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender);
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out);
     }
 
-    fn sys_recv(&mut self, ctx: &Context<Self::Msg>, msg: SystemMsg, sender: Sender) {
+    fn sys_recv(&mut self, ctx: &Context<Self::Msg>, msg: SystemMsg, send_out: Option<BasicActorRef>) {
         if let SystemMsg::Event(evt) = msg {
-            self.receive(ctx, evt, sender);
+            self.receive(ctx, evt, send_out);
         }
     }
 }
 
 impl Receive<TestProbe> for EventSubscriber {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, msg: TestProbe, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, msg: TestProbe, _send_out: Option<BasicActorRef>) {
         msg.0.event(());
         self.probe = Some(msg);
     }
 }
 
 impl Receive<SystemEvent> for EventSubscriber {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, msg: SystemEvent, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, msg: SystemEvent, _send_out: Option<BasicActorRef>) {
         match msg {
             SystemEvent::ActorCreated(created) => {
                 if created.actor.path() == "/user/dumb-actor" {
@@ -293,20 +293,20 @@ impl Actor for DeadLetterSub {
         );
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, sender: Sender) {
-        self.receive(ctx, msg, sender)
+    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+        self.receive(ctx, msg, send_out)
     }
 }
 
 impl Receive<TestProbe> for DeadLetterSub {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, msg: TestProbe, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, msg: TestProbe, _send_out: Option<BasicActorRef>) {
         msg.0.event(());
         self.probe = Some(msg);
     }
 }
 
 impl Receive<DeadLetter> for DeadLetterSub {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: DeadLetter, _sender: Sender) {
+    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: DeadLetter, _send_out: Option<BasicActorRef>) {
         self.probe.as_ref().unwrap().0.event(());
     }
 }
