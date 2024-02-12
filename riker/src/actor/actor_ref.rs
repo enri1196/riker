@@ -45,15 +45,6 @@ impl<Msg: Message> ActorRef<Msg> {
     pub fn new(cell: ExtendedCell<Msg>) -> ActorRef<Msg> {
         ActorRef { cell }
     }
-
-    pub async fn send_msg(&self, msg: Msg, send_out: impl Into<Option<BasicActorRef>>) {
-        let envelope = Envelope {
-            msg,
-            send_out: send_out.into(),
-        };
-        // consume the result (we don't return it to user)
-        let _ = self.cell.send_msg(envelope).await;
-    }
 }
 
 #[async_trait::async_trait]
@@ -63,7 +54,12 @@ where
     M: Message,
 {
     async fn tell(&self, msg: T, send_out: Option<BasicActorRef>) {
-        self.send_msg(msg.into(), send_out).await;
+        let envelope = Envelope {
+            msg: msg.into(),
+            send_out: send_out.into(),
+        };
+        // consume the result (we don't return it to user)
+        let _ = self.cell.send_msg(envelope).await;
     }
 
     fn box_clone(&self) -> BoxedTell<T> {
