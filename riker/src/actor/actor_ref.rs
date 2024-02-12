@@ -15,6 +15,8 @@ use crate::{
     AnyMessage, Envelope, Message,
 };
 
+use super::actor_cell::Children;
+
 /// A lightweight, typed reference to interact with its underlying
 /// actor instance through concurrent messaging.
 ///
@@ -121,7 +123,7 @@ impl<Msg: Message> ActorReference for ActorRef<Msg> {
     }
 
     /// Iterator over children references.
-    fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
+    fn children(&self) -> &Children {
         self.cell.children()
     }
 
@@ -172,7 +174,7 @@ impl<Msg: Message> ActorReference for &ActorRef<Msg> {
     }
 
     /// Iterator over children references.
-    fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
+    fn children<'a>(&'a self) -> &Children {
         self.cell.children()
     }
 }
@@ -252,7 +254,7 @@ where
     }
 
     /// Iterator over children references.
-    fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
+    fn children<'a>(&'a self) -> &Children {
         self.0.children()
     }
 }
@@ -394,7 +396,7 @@ impl ActorReference for BasicActorRef {
     }
 
     /// Iterator over children references.
-    fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
+    fn children<'a>(&'a self) -> &Children {
         self.cell.children()
     }
 }
@@ -451,7 +453,7 @@ impl ActorReference for &BasicActorRef {
     }
 
     /// Iterator over children references.
-    fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
+    fn children<'a>(&'a self) -> &Children {
         self.cell.children()
     }
 }

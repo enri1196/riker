@@ -360,13 +360,13 @@ impl ActorSystem {
             if node.is_root() {
                 println!("{}", sys.name());
 
-                for actor in node.children() {
+                for actor in node.children().iter() {
                     print_node(sys, &actor, "");
                 }
             } else {
                 println!("{}└─ {}", indent, node.name());
 
-                for actor in node.children() {
+                for actor in node.children().iter() {
                     print_node(sys, &actor, &(indent.to_string() + "   "));
                 }
             }
@@ -700,6 +700,7 @@ impl RefSelectionFactory for ActorSystem {
                 Some(root.clone())
             } else if root.has_children() {
                 root.children()
+                    .iter()
                     .find_map(|act| find_actor_by_path_recursive(&act, path))
             } else {
                 None

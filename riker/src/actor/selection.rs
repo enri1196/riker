@@ -101,13 +101,12 @@ impl ActorSelection {
                     }
                 }
                 Some(&Selection::AllChildren) => {
-                    // TODO: FIX THIS
-                    // for child in anchor.children() {
-                    //     let _ = child.try_tell(msg.clone(), send_out.clone());
-                    // }
+                    for child in anchor.children().iter() {
+                        let _ = child.try_tell(msg.clone(), send_out.clone()).await;
+                    }
                 }
                 Some(&Selection::ChildName(ref name)) => {
-                    let child = anchor.children().filter(|c| c.name() == name).last();
+                    let child = anchor.children().iter().filter(|c| c.name() == name).last();
                     if path_vec.peek().is_none() {
                         if let Some(actor_ref) = child {
                             actor_ref.try_tell(msg, send_out.clone()).await.unwrap();
@@ -165,13 +164,12 @@ impl ActorSelection {
                     }
                 }
                 Some(&Selection::AllChildren) => {
-                    // TODO: FIX THIS!!
-                    // for child in anchor.children() {
-                    //     child.sys_tell(msg.clone()).await;
-                    // }
+                    for child in anchor.children().iter() {
+                        child.sys_tell(msg.clone()).await;
+                    }
                 }
                 Some(&Selection::ChildName(ref name)) => {
-                    let child = anchor.children().filter(|c| c.name() == name).last();
+                    let child = anchor.children().iter().filter(|c| c.name() == name).last();
                     if path_vec.peek().is_none() {
                         if let Some(actor_ref) = child {
                             actor_ref.try_tell(msg, send_out.clone()).await.unwrap();

@@ -1,8 +1,7 @@
 use crate::{actors::SystemMsg, Message};
 
 use super::{
-    actor_ref::BoxedTell, ActorArgs, ActorFactory, ActorFactoryArgs, ActorPath, ActorRef, ActorUri,
-    BasicActorRef, BoxActorProd, Context, CreateError, Strategy,
+    actor_cell::Children, actor_ref::BoxedTell, ActorArgs, ActorFactory, ActorFactoryArgs, ActorPath, ActorRef, ActorUri, BasicActorRef, BoxActorProd, Context, CreateError, Strategy
 };
 
 #[async_trait::async_trait]
@@ -96,7 +95,7 @@ pub trait ActorReference {
     fn is_child(&self, actor: &BasicActorRef) -> bool;
 
     /// Iterator over children references.
-    fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a>;
+    fn children(&self) -> &Children;
 }
 
 #[async_trait::async_trait]

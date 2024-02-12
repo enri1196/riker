@@ -105,8 +105,8 @@ impl ActorCell {
         self.inner.children.len() > 0
     }
 
-    pub(crate) fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
-        Box::new(self.inner.children.iter())
+    pub(crate) fn children(&self) -> &Children {
+        &self.inner.children
     }
 
     pub(crate) fn system(&self) -> &ActorSystem {
@@ -359,8 +359,8 @@ where
         self.cell.is_child(actor)
     }
 
-    pub fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
-        self.cell.children()
+    pub fn children(&self) -> &Children {
+        &self.cell.children()
     }
 
     pub fn user_root(&self) -> BasicActorRef {
@@ -578,6 +578,7 @@ where
                 Some(root.clone())
             } else if root.has_children() {
                 root.children()
+                    .iter()
                     .find_map(|act| find_actor_by_path_recursive(&act, path))
             } else {
                 None
