@@ -126,11 +126,6 @@ impl<Msg: Message> ActorReference for ActorRef<Msg> {
     fn children(&self) -> &Children {
         self.cell.children()
     }
-
-    // fn sys_tell(&self, msg: SystemMsg) {
-    //     let envelope = Envelope { msg, sender: None };
-    //     let _ = self.cell.send_sys_msg(envelope);
-    // }
 }
 
 impl<Msg: Message> ActorReference for &ActorRef<Msg> {
