@@ -15,8 +15,8 @@ use tokio::task::JoinHandle;
 /// by sending a message to the `sender`. The sender is a temporary actor
 /// that fulfills the `Future` upon receiving the reply.
 ///
-/// `futures::future::RemoteHandle` is the future returned and the task
-/// is executed on the provided executor `ctx`.
+/// `tokio::task::JoinHandle` is the future returned and the task
+/// is executed on the provided executor.
 ///
 /// This pattern is especially useful for interacting with actors from outside
 /// of the actor system, such as sending data from HTTP request to an actor
