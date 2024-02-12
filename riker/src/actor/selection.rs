@@ -39,6 +39,13 @@ pub struct ActorSelection {
     path: String,
 }
 
+#[derive(Debug)]
+enum Selection {
+    Parent,
+    ChildName(String),
+    AllChildren,
+}
+
 impl ActorSelection {
     pub fn new(
         anchor: BasicActorRef,
@@ -66,11 +73,12 @@ impl ActorSelection {
         })
     }
 
-    pub fn try_tell<Msg>(&self, msg: Msg, sender: impl Into<Option<BasicActorRef>>)
+    pub async fn try_tell<Msg>(&self, msg: Msg, sender: impl Into<Option<BasicActorRef>>)
     where
         Msg: Message,
     {
-        fn walk<'a, I, Msg>(
+        #[async_recursion::async_recursion]
+        async fn walk<'a, I, Msg>(
             anchor: &BasicActorRef,
             // dl: &BasicActorRef,
             mut path_vec: Peekable<I>,
@@ -78,7 +86,7 @@ impl ActorSelection {
             send_out: &Option<BasicActorRef>,
             path: &str,
         ) where
-            I: Iterator<Item = &'a Selection>,
+            I: Iterator<Item = &'a Selection> + Send,
             Msg: Message,
         {
             let seg = path_vec.next();
@@ -87,21 +95,22 @@ impl ActorSelection {
                 Some(&Selection::Parent) => {
                     if path_vec.peek().is_none() {
                         let parent = anchor.parent();
-                        let _ = parent.try_tell(msg, send_out.clone());
+                        let _ = parent.try_tell(msg, send_out.clone()).await;
                     } else {
-                        walk(&anchor.parent(), path_vec, msg, send_out, path);
+                        walk(&anchor.parent(), path_vec, msg, send_out, path).await;
                     }
                 }
                 Some(&Selection::AllChildren) => {
-                    for child in anchor.children() {
-                        let _ = child.try_tell(msg.clone(), send_out.clone());
-                    }
+                    // TODO: FIX THIS
+                    // for child in anchor.children() {
+                    //     let _ = child.try_tell(msg.clone(), send_out.clone());
+                    // }
                 }
                 Some(&Selection::ChildName(ref name)) => {
                     let child = anchor.children().filter(|c| c.name() == name).last();
                     if path_vec.peek().is_none() {
                         if let Some(actor_ref) = child {
-                            actor_ref.try_tell(msg, send_out.clone()).unwrap();
+                            actor_ref.try_tell(msg, send_out.clone()).await.unwrap();
                         }
                     } else if path_vec.peek().is_some() && child.is_some() {
                         walk(
@@ -111,7 +120,8 @@ impl ActorSelection {
                             msg,
                             send_out,
                             path,
-                        );
+                        )
+                        .await;
                     } else {
                         // todo send to deadletters?
                     }
@@ -127,11 +137,13 @@ impl ActorSelection {
             msg,
             &sender.into(),
             &self.path,
-        );
+        )
+        .await;
     }
 
-    pub fn sys_tell(&self, msg: SystemMsg, sender: impl Into<Option<BasicActorRef>>) {
-        fn walk<'a, I>(
+    pub async fn sys_tell(&self, msg: SystemMsg, sender: impl Into<Option<BasicActorRef>>) {
+        #[async_recursion::async_recursion]
+        async fn walk<'a, I>(
             anchor: &BasicActorRef,
             // dl: &BasicActorRef,
             mut path_vec: Peekable<I>,
@@ -139,7 +151,7 @@ impl ActorSelection {
             send_out: &Option<BasicActorRef>,
             path: &str,
         ) where
-            I: Iterator<Item = &'a Selection>,
+            I: Iterator<Item = &'a Selection> + Send,
         {
             let seg = path_vec.next();
 
@@ -147,21 +159,22 @@ impl ActorSelection {
                 Some(&Selection::Parent) => {
                     if path_vec.peek().is_none() {
                         let parent = anchor.parent();
-                        parent.sys_tell(msg);
+                        parent.sys_tell(msg).await;
                     } else {
-                        walk(&anchor.parent(), path_vec, msg, send_out, path);
+                        walk(&anchor.parent(), path_vec, msg, send_out, path).await;
                     }
                 }
                 Some(&Selection::AllChildren) => {
-                    for child in anchor.children() {
-                        child.sys_tell(msg.clone());
-                    }
+                    // TODO: FIX THIS!!
+                    // for child in anchor.children() {
+                    //     child.sys_tell(msg.clone()).await;
+                    // }
                 }
                 Some(&Selection::ChildName(ref name)) => {
                     let child = anchor.children().filter(|c| c.name() == name).last();
                     if path_vec.peek().is_none() {
                         if let Some(actor_ref) = child {
-                            actor_ref.try_tell(msg, send_out.clone()).unwrap();
+                            actor_ref.try_tell(msg, send_out.clone()).await.unwrap();
                         }
                     } else if path_vec.peek().is_some() && child.is_some() {
                         walk(
@@ -171,7 +184,8 @@ impl ActorSelection {
                             msg,
                             send_out,
                             path,
-                        );
+                        )
+                        .await;
                     } else {
                         // todo send to deadletters?
                     }
@@ -187,15 +201,9 @@ impl ActorSelection {
             msg,
             &sender.into(),
             &self.path,
-        );
+        )
+        .await;
     }
-}
-
-#[derive(Debug)]
-enum Selection {
-    Parent,
-    ChildName(String),
-    AllChildren,
 }
 
 pub trait ActorSelectionFactory {

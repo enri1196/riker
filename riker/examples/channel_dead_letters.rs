@@ -10,16 +10,28 @@ pub struct SomeMessage;
 #[derive(Default)]
 struct DumbActor;
 
+#[async_trait::async_trait]
 impl Actor for DumbActor {
     type Msg = DumbActorMsg;
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out);
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await;
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<SomeMessage> for DumbActor {
-    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: SomeMessage, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: SomeMessage,
+        _send_out: Option<BasicActorRef>,
+    ) {
         println!("{}: -> got msg: {:?} ", ctx.myself().name(), msg);
     }
 }
@@ -29,10 +41,11 @@ impl Receive<SomeMessage> for DumbActor {
 #[derive(Default)]
 struct DeadLetterActor;
 
+#[async_trait::async_trait]
 impl Actor for DeadLetterActor {
     type Msg = DeadLetterActorMsg;
 
-    fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
+    async fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         let topic = Topic::from("*");
 
         println!(
@@ -44,37 +57,52 @@ impl Actor for DeadLetterActor {
 
         ctx.system()
             .dead_letters()
-            .tell(Subscribe { actor: sub, topic }, None);
+            .tell(Subscribe { actor: sub, topic }, None)
+            .await;
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out);
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await;
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<DeadLetter> for DeadLetterActor {
-    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: DeadLetter, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: DeadLetter,
+        _send_out: Option<BasicActorRef>,
+    ) {
         println!("{}: -> got msg: {:?} ", ctx.myself().name(), msg);
     }
 }
 
 #[tokio::main]
 async fn main() {
-    let sys = ActorSystem::new().unwrap();
+    let sys = ActorSystem::new().await.unwrap();
 
-    let _sub = sys.actor_of::<DeadLetterActor>("system-actor").unwrap();
+    let _sub = sys
+        .actor_of::<DeadLetterActor>("system-actor")
+        .await
+        .unwrap();
 
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     println!("Creating dump actor");
-    let dumb = sys.actor_of::<DumbActor>("dumb-actor").unwrap();
+    let dumb = sys.actor_of::<DumbActor>("dumb-actor").await.unwrap();
 
     println!("Stopping dump actor");
-    sys.stop(&dumb);
+    sys.stop(&dumb).await;
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     println!("Sending SomeMessage to stopped actor");
-    dumb.tell(SomeMessage, None);
+    dumb.tell(SomeMessage, None).await;
     tokio::time::sleep(Duration::from_millis(500)).await;
     sys.print_tree();
 }

@@ -9,10 +9,16 @@ use std::time::Duration;
 #[derive(Default, Debug)]
 struct Child;
 
+#[async_trait::async_trait]
 impl Actor for Child {
     type Msg = String;
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, _send_out: Option<BasicActorRef>) {
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        _send_out: Option<BasicActorRef>,
+    ) {
         println!("{}: {:?} -> got msg: {}", ctx.myself().name(), self, msg);
     }
 }
@@ -20,58 +26,64 @@ impl Actor for Child {
 #[derive(Clone, Default, Debug)]
 struct SelectTest;
 
+#[async_trait::async_trait]
 impl Actor for SelectTest {
     type Msg = String;
 
-    fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
+    async fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         // create first child actor
-        let _ = ctx.actor_of::<Child>("child_a").unwrap();
+        let _ = ctx.actor_of::<Child>("child_a").await.unwrap();
 
         // create second child actor
-        let _ = ctx.actor_of::<Child>("child_b").unwrap();
+        let _ = ctx.actor_of::<Child>("child_b").await.unwrap();
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, _send_out: Option<BasicActorRef>) {
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        _send_out: Option<BasicActorRef>,
+    ) {
         println!("{}: {:?} -> got msg: {}", ctx.myself().name(), self, msg);
         // up and down: ../select-actor/child_a
         let path = "../select-actor/child_a";
         println!("{}: {:?} -> path: {}", ctx.myself().name(), self, path);
         let sel = ctx.select(path).unwrap();
-        sel.try_tell(path.to_string(), None);
+        sel.try_tell(path.to_string(), None).await;
 
         // child: child_a
         let path = "child_a";
         println!("{}: {:?} -> path: {}", ctx.myself().name(), self, path);
         let sel = ctx.select(path).unwrap();
-        sel.try_tell(path.to_string(), None);
+        sel.try_tell(path.to_string(), None).await;
 
         // absolute: /user/select-actor/child_a
         let path = "/user/select-actor/child_a";
         println!("{}: {:?} -> path: {}", ctx.myself().name(), self, path);
         let sel = ctx.select(path).unwrap();
-        sel.try_tell(path.to_string(), None);
+        sel.try_tell(path.to_string(), None).await;
 
         // absolute all: /user/select-actor/*
         let path = "/user/select-actor/*";
         println!("{}: {:?} -> path: {}", ctx.myself().name(), self, path);
         let sel = ctx.select(path).unwrap();
-        sel.try_tell(path.to_string(), None);
+        sel.try_tell(path.to_string(), None).await;
 
         // all: *
         let path = "*";
         println!("{}: {:?} -> path: {}", ctx.myself().name(), self, path);
         let sel = ctx.select(path).unwrap();
-        sel.try_tell(path.to_string(), None);
+        sel.try_tell(path.to_string(), None).await;
     }
 }
 
 #[tokio::main]
 async fn main() {
-    let sys = ActorSystem::new().unwrap();
+    let sys = ActorSystem::new().await.unwrap();
 
-    let actor = sys.actor_of::<SelectTest>("select-actor").unwrap();
+    let actor = sys.actor_of::<SelectTest>("select-actor").await.unwrap();
 
-    actor.tell("msg for select-actor", None);
+    actor.tell("msg for select-actor", None).await;
 
     tokio::time::sleep(Duration::from_millis(500)).await;
 

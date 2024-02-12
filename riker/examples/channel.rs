@@ -19,10 +19,11 @@ impl ActorFactoryArgs<ChannelRef<PowerStatus>> for GpsActor {
     }
 }
 
+#[async_trait::async_trait]
 impl Actor for GpsActor {
     type Msg = GpsActorMsg;
 
-    fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
+    async fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         let topic = Topic::from("my-topic");
 
         println!(
@@ -31,16 +32,27 @@ impl Actor for GpsActor {
             topic
         );
         let sub = BoxedTell(Arc::new(ctx.myself().clone()));
-        self.chan.tell(Subscribe { actor: sub, topic }, None);
+        self.chan.tell(Subscribe { actor: sub, topic }, None).await;
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out);
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await;
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<PowerStatus> for GpsActor {
-    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: PowerStatus, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: PowerStatus,
+        _send_out: Option<BasicActorRef>,
+    ) {
         println!("{}: -> got msg: {:?}", ctx.myself().name(), msg);
     }
 }
@@ -56,10 +68,11 @@ impl ActorFactoryArgs<ChannelRef<PowerStatus>> for NavigationActor {
     }
 }
 
+#[async_trait::async_trait]
 impl Actor for NavigationActor {
     type Msg = NavigationActorMsg;
 
-    fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
+    async fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         let topic = Topic::from("my-topic");
 
         println!(
@@ -68,28 +81,41 @@ impl Actor for NavigationActor {
             topic
         );
         let sub = BoxedTell(Arc::new(ctx.myself().clone()));
-        self.chan.tell(Subscribe { actor: sub, topic }, None);
+        self.chan.tell(Subscribe { actor: sub, topic }, None).await;
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out);
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await;
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<PowerStatus> for NavigationActor {
-    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: PowerStatus, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: PowerStatus,
+        _send_out: Option<BasicActorRef>,
+    ) {
         println!("{}: -> got msg: {:?}", ctx.myself().name(), msg);
     }
 }
 
 #[tokio::main]
 async fn main() {
-    let sys = ActorSystem::new().unwrap();
-    let chan: ChannelRef<PowerStatus> = channel("power-status", &sys).unwrap();
+    let sys = ActorSystem::new().await.unwrap();
+    let chan: ChannelRef<PowerStatus> = channel("power-status", &sys).await.unwrap();
 
     sys.actor_of_args::<GpsActor, _>("gps-actor", chan.clone())
+        .await
         .unwrap();
     sys.actor_of_args::<NavigationActor, _>("navigation-actor", chan.clone())
+        .await
         .unwrap();
 
     tokio::time::sleep(Duration::from_millis(500)).await;
@@ -105,7 +131,8 @@ async fn main() {
             topic,
         },
         None,
-    );
+    )
+    .await;
     // sleep another half seconds to process messages
     tokio::time::sleep(Duration::from_millis(500)).await;
     sys.print_tree();

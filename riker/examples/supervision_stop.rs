@@ -9,36 +9,55 @@ pub struct Panic;
 #[derive(Default)]
 struct DumbActor;
 
+#[async_trait::async_trait]
 impl Actor for DumbActor {
     type Msg = ();
 
-    fn recv(&mut self, _: &Context<Self::Msg>, _: Self::Msg, _send_out: Option<BasicActorRef>) {}
+    async fn recv(
+        &mut self,
+        _: &Context<Self::Msg>,
+        _: Self::Msg,
+        _send_out: Option<BasicActorRef>,
+    ) {
+    }
 }
 
 #[actor(Panic)]
 #[derive(Default)]
 struct PanicActor;
 
+#[async_trait::async_trait]
 impl Actor for PanicActor {
     type Msg = PanicActorMsg;
 
-    fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
-        ctx.actor_of::<DumbActor>("child_a").unwrap();
+    async fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
+        ctx.actor_of::<DumbActor>("child_a").await.unwrap();
 
-        ctx.actor_of::<DumbActor>("child_b").unwrap();
+        ctx.actor_of::<DumbActor>("child_b").await.unwrap();
 
-        ctx.actor_of::<DumbActor>("child_c").unwrap();
+        ctx.actor_of::<DumbActor>("child_c").await.unwrap();
 
-        ctx.actor_of::<DumbActor>("child_d").unwrap();
+        ctx.actor_of::<DumbActor>("child_d").await.unwrap();
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out);
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await;
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<Panic> for PanicActor {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Panic, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        _msg: Panic,
+        _send_out: Option<BasicActorRef>,
+    ) {
         panic!("// TEST PANIC // TEST PANIC // TEST PANIC //");
     }
 }
@@ -50,33 +69,45 @@ struct RestartSup {
     actor_to_fail: Option<ActorRef<PanicActorMsg>>,
 }
 
+#[async_trait::async_trait]
 impl Actor for RestartSup {
     type Msg = RestartSupMsg;
 
-    fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
-        self.actor_to_fail = ctx.actor_of::<PanicActor>("actor-to-fail").ok();
+    async fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
+        self.actor_to_fail = ctx.actor_of::<PanicActor>("actor-to-fail").await.ok();
     }
 
     fn supervisor_strategy(&self) -> Strategy {
         Strategy::Stop
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out)
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<Panic> for RestartSup {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Panic, _send_out: Option<BasicActorRef>) {
-        self.actor_to_fail.as_ref().unwrap().tell(Panic, None);
+    async fn receive(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        _msg: Panic,
+        _send_out: Option<BasicActorRef>,
+    ) {
+        self.actor_to_fail.as_ref().unwrap().tell(Panic, None).await;
     }
 }
 
 #[tokio::main]
 async fn main() {
-    let sys = ActorSystem::new().unwrap();
+    let sys = ActorSystem::new().await.unwrap();
 
-    let sup = sys.actor_of::<RestartSup>("supervisor").unwrap();
+    let sup = sys.actor_of::<RestartSup>("supervisor").await.unwrap();
     // println!("Child not added yet");
     // sys.print_tree();
 
@@ -84,7 +115,7 @@ async fn main() {
     tokio::time::sleep(Duration::from_millis(500)).await;
     sys.print_tree();
 
-    sup.tell(Panic, None);
+    sup.tell(Panic, None).await;
     tokio::time::sleep(Duration::from_millis(500)).await;
     println!("We should see panic printed, but we still alive and panic actor gone!");
     sys.print_tree();

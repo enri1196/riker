@@ -6,10 +6,16 @@ use std::time::Duration;
 #[derive(Default)]
 struct Child;
 
+#[async_trait::async_trait]
 impl Actor for Child {
     type Msg = String;
 
-    fn recv(&mut self, _ctx: &Context<Self::Msg>, msg: Self::Msg, _send_out: Option<BasicActorRef>) {
+    async fn recv(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        _send_out: Option<BasicActorRef>,
+    ) {
         println!("child got a message {}", msg);
     }
 }
@@ -20,27 +26,33 @@ struct MyActor {
 }
 
 // implement the Actor trait
+#[async_trait::async_trait]
 impl Actor for MyActor {
     type Msg = String;
 
-    fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
-        self.child = Some(ctx.actor_of::<Child>("my-child").unwrap());
+    async fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
+        self.child = Some(ctx.actor_of::<Child>("my-child").await.unwrap());
     }
 
-    fn recv(&mut self, _ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+    async fn recv(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
         println!("parent got a message {}", msg);
-        self.child.as_ref().unwrap().tell(msg, send_out);
+        self.child.as_ref().unwrap().tell(msg, send_out).await;
     }
 }
 
 // start the system and create an actor
 #[tokio::main]
 async fn main() {
-    let sys = ActorSystem::new().unwrap();
+    let sys = ActorSystem::new().await.unwrap();
 
-    let my_actor = sys.actor_of::<MyActor>("my-actor").unwrap();
+    let my_actor = sys.actor_of::<MyActor>("my-actor").await.unwrap();
 
-    my_actor.tell("Hello my actor!".to_string(), None);
+    my_actor.tell("Hello my actor!".to_string(), None).await;
 
     println!("Child not added yet");
     sys.print_tree();

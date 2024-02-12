@@ -1,4 +1,8 @@
-use std::{fmt::{self, Debug}, ops::Deref, sync::Arc};
+use std::{
+    fmt::{self, Debug},
+    ops::Deref,
+    sync::Arc,
+};
 
 use crate::{
     actor::{
@@ -40,23 +44,24 @@ impl<Msg: Message> ActorRef<Msg> {
         ActorRef { cell }
     }
 
-    pub fn send_msg(&self, msg: Msg, send_out: impl Into<Option<BasicActorRef>>) {
+    pub async fn send_msg(&self, msg: Msg, send_out: impl Into<Option<BasicActorRef>>) {
         let envelope = Envelope {
             msg,
             send_out: send_out.into(),
         };
         // consume the result (we don't return it to user)
-        let _ = self.cell.send_msg(envelope);
+        let _ = self.cell.send_msg(envelope).await;
     }
 }
 
+#[async_trait::async_trait]
 impl<T, M> Tell<T> for ActorRef<M>
 where
     T: Message + Into<M>,
     M: Message,
 {
-    fn tell(&self, msg: T, send_out: Option<BasicActorRef>) {
-        self.send_msg(msg.into(), send_out);
+    async fn tell(&self, msg: T, send_out: Option<BasicActorRef>) {
+        self.send_msg(msg.into(), send_out).await;
     }
 
     fn box_clone(&self) -> BoxedTell<T> {
@@ -64,10 +69,14 @@ where
     }
 }
 
+#[async_trait::async_trait]
 impl<M: Message> SysTell for ActorRef<M> {
-    fn sys_tell(&self, msg: SystemMsg) {
-        let envelope = Envelope { send_out: None, msg };
-        let _ = self.cell.send_sys_msg(envelope);
+    async fn sys_tell(&self, msg: SystemMsg) {
+        let envelope = Envelope {
+            send_out: None,
+            msg,
+        };
+        let _ = self.cell.send_sys_msg(envelope).await;
     }
 }
 
@@ -168,10 +177,14 @@ impl<Msg: Message> ActorReference for &ActorRef<Msg> {
     }
 }
 
+#[async_trait::async_trait]
 impl<M: Message> SysTell for &ActorRef<M> {
-    fn sys_tell(&self, msg: SystemMsg) {
-        let envelope = Envelope { msg, send_out: None };
-        let _ = self.cell.send_sys_msg(envelope);
+    async fn sys_tell(&self, msg: SystemMsg) {
+        let envelope = Envelope {
+            msg,
+            send_out: None,
+        };
+        let _ = self.cell.send_sys_msg(envelope).await;
     }
 }
 
@@ -244,9 +257,10 @@ where
     }
 }
 
+#[async_trait::async_trait]
 impl<T: Debug + Clone + Send + 'static> SysTell for BoxedTell<T> {
-    fn sys_tell(&self, msg: SystemMsg) {
-        self.0.sys_tell(msg)
+    async fn sys_tell(&self, msg: SystemMsg) {
+        self.0.sys_tell(msg).await
     }
 }
 
@@ -318,7 +332,7 @@ impl BasicActorRef {
     /// Send a message to this actor
     ///
     /// Returns a result. If the message type is not supported Error is returned.
-    pub fn try_tell<Msg>(
+    pub async fn try_tell<Msg>(
         &self,
         msg: Msg,
         sender: impl Into<Option<BasicActorRef>>,
@@ -327,14 +341,15 @@ impl BasicActorRef {
         Msg: Message + Send,
     {
         self.try_tell_any(&mut AnyMessage::new(msg, true), sender)
+            .await
     }
 
-    pub fn try_tell_any(
+    pub async fn try_tell_any(
         &self,
         msg: &mut AnyMessage,
         sender: impl Into<Option<BasicActorRef>>,
     ) -> Result<(), AnyEnqueueError> {
-        self.cell.send_any_msg(msg, sender.into())
+        self.cell.send_any_msg(msg, sender.into()).await
     }
 }
 
@@ -384,10 +399,14 @@ impl ActorReference for BasicActorRef {
     }
 }
 
+#[async_trait::async_trait]
 impl SysTell for BasicActorRef {
-    fn sys_tell(&self, msg: SystemMsg) {
-        let envelope = Envelope { msg, send_out: None };
-        let _ = self.cell.send_sys_msg(envelope);
+    async fn sys_tell(&self, msg: SystemMsg) {
+        let envelope = Envelope {
+            msg,
+            send_out: None,
+        };
+        let _ = self.cell.send_sys_msg(envelope).await;
     }
 }
 
@@ -437,10 +456,14 @@ impl ActorReference for &BasicActorRef {
     }
 }
 
+#[async_trait::async_trait]
 impl SysTell for &BasicActorRef {
-    fn sys_tell(&self, msg: SystemMsg) {
-        let envelope = Envelope { msg, send_out: None };
-        let _ = self.cell.send_sys_msg(envelope);
+    async fn sys_tell(&self, msg: SystemMsg) {
+        let envelope = Envelope {
+            msg,
+            send_out: None,
+        };
+        let _ = self.cell.send_sys_msg(envelope).await;
     }
 }
 

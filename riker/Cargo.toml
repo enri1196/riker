@@ -24,6 +24,8 @@ regex = "1.10.2"
 uuid = { version = "1.6.1", features = ["v4"] }
 pin-utils = "0.1.0"
 tracing = "0.1.40"
+async-trait = "0.1.77"
+async-recursion = "1.0.5"
 
 num_cpus = "1.16.0"
 dashmap = "5.5.3"

@@ -21,3 +21,4 @@ proc-macro2 = "1.0"
 
 [dev-dependencies]
 riker = { path = "../riker" }
+async-trait = "0.1.77"

@@ -13,10 +13,7 @@ pub enum KernelMsg {
     RunActor,
     Sys(ActorSystem),
 }
-use std::{
-    panic::{catch_unwind, AssertUnwindSafe},
-    sync::Arc,
-};
+use std::{panic::AssertUnwindSafe, sync::Arc};
 use tokio::sync::Mutex;
 
 use futures::FutureExt;
@@ -48,7 +45,7 @@ impl<A: Actor> Clone for Dock<A> {
     }
 }
 
-pub fn kernel<A>(
+pub async fn kernel<A>(
     props: BoxActorProd<A>,
     cell: ExtendedCell<A::Msg>,
     mailbox: Mailbox<A::Msg>,
@@ -59,7 +56,7 @@ where
 {
     let (tx, mut rx) = channel::<KernelMsg>(1000); // todo config?
     let kr = KernelRef { tx };
-    let actor = start_actor(&props)?;
+    let actor = start_actor(&props).await?;
 
     let outer_sys = sys.clone();
     let outer_kr = kr.clone();
@@ -89,7 +86,7 @@ where
                     restart_actor(&dock, actor_ref.clone().into(), &props, &asys).await;
                 }
                 KernelMsg::TerminateActor => {
-                    terminate_actor(&mailbox, actor_ref.clone().into(), &asys);
+                    terminate_actor(&mailbox, actor_ref.clone().into(), &asys).await;
                     break;
                 }
                 KernelMsg::Sys(s) => {
@@ -112,11 +109,12 @@ async fn restart_actor<A>(
     A: Actor,
 {
     let mut a = dock.actor.lock().await;
-    match start_actor(props) {
+    match start_actor(props).await {
         Ok(actor) => {
             *a = Some(actor);
-            actor_ref.sys_tell(SystemMsg::ActorInit);
-            sys.publish_event(ActorRestarted { actor: actor_ref }.into());
+            actor_ref.sys_tell(SystemMsg::ActorInit).await;
+            sys.publish_event(ActorRestarted { actor: actor_ref }.into())
+                .await;
         }
         Err(_) => {
             warn!("Actor failed to restart: {:?}", actor_ref);
@@ -124,30 +122,37 @@ async fn restart_actor<A>(
     }
 }
 
-fn terminate_actor<Msg>(mbox: &Mailbox<Msg>, actor_ref: BasicActorRef, sys: &ActorSystem)
+async fn terminate_actor<Msg>(mbox: &Mailbox<Msg>, actor_ref: BasicActorRef, sys: &ActorSystem)
 where
     Msg: Message,
 {
     sys.provider.unregister(actor_ref.path());
-    flush_to_deadletters(mbox, &actor_ref, sys);
+    flush_to_deadletters(mbox, &actor_ref, sys).await;
     sys.publish_event(
         ActorTerminated {
             actor: actor_ref.clone(),
         }
         .into(),
-    );
+    )
+    .await;
 
     let parent = actor_ref.parent();
     if !parent.is_root() {
-        parent.sys_tell(ActorTerminated { actor: actor_ref }.into());
+        parent
+            .sys_tell(ActorTerminated { actor: actor_ref }.into())
+            .await;
     }
 }
 
-fn start_actor<A>(props: &BoxActorProd<A>) -> Result<A, CreateError>
+async fn start_actor<A>(props: &BoxActorProd<A>) -> Result<A, CreateError>
 where
     A: Actor,
 {
-    let actor = catch_unwind(|| props.produce()).map_err(|_| CreateError::Panicked)?;
+    // let actor = catch_unwind(|| props.produce()).map_err(|_| CreateError::Panicked)?;
+    let actor = AssertUnwindSafe(props.produce())
+        .catch_unwind()
+        .await
+        .map_err(|_| CreateError::Panicked)?;
 
     Ok(actor)
 }

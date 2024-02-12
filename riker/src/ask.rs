@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use crate::actors::*;
 use futures::FutureExt;
@@ -59,36 +60,37 @@ use tokio::task::JoinHandle;
 /// assert_eq!(r.await.unwrap(), "Hello Will Riker".to_string());
 /// # })
 /// ```
-
 pub trait Ask<Msg: Message> {
     fn ask<Ret: Message>(&self, msg: Msg) -> JoinHandle<Ret>;
 }
 
 impl<Msg: Message> Ask<Msg> for ActorRef<Msg> {
     fn ask<Ret: Message>(&self, msg: Msg) -> JoinHandle<Ret> {
-        let (tx, rx) = channel::<Ret>();
-        let tx = Arc::new(Mutex::new(Some(tx)));
-        let sys = self.cell.system();
-
-        let props = Props::new_from_args(Box::new(AskActor::new), tx);
-        let actor = sys.tmp_actor_of_props(props).unwrap();
-        self.tell(msg, Some(actor.into()));
-
-        sys.run(rx.map(|r| r.unwrap()))
+        let my_self = self.clone();
+        let sys = self.cell.system().clone();
+        tokio::spawn(async move {
+            let (tx, rx) = channel::<Ret>();
+            let tx = Arc::new(Mutex::new(Some(tx)));
+            let props = Props::new_from_args(Box::new(AskActor::new), tx);
+            let actor = sys.tmp_actor_of_props(props).await.unwrap();
+            my_self.tell(msg, Some(actor.into())).await;
+            rx.map(|r| r.unwrap()).await
+        })
     }
 }
 
 impl<Msg: Message> Ask<Msg> for BasicActorRef {
     fn ask<Ret: Message>(&self, msg: Msg) -> JoinHandle<Ret> {
-        let (tx, rx) = channel::<Ret>();
-        let tx = Arc::new(Mutex::new(Some(tx)));
-        let sys = self.cell.system();
-
-        let props = Props::new_from_args(Box::new(AskActor::new), tx);
-        let actor = sys.tmp_actor_of_props(props).unwrap();
-        self.try_tell(msg, Some(actor.into())).unwrap();
-
-        sys.run(rx.map(|r| r.unwrap()))
+        let my_self = self.clone();
+        let sys = self.cell.system().clone();
+        tokio::spawn(async move {
+            let (tx, rx) = channel::<Ret>();
+            let tx = Arc::new(Mutex::new(Some(tx)));
+            let props = Props::new_from_args(Box::new(AskActor::new), tx);
+            let actor = sys.tmp_actor_of_props(props).await.unwrap();
+            my_self.try_tell(msg, Some(actor.into())).await.unwrap();
+            rx.map(|r| r.unwrap()).await
+        })
     }
 }
 
@@ -103,13 +105,13 @@ impl<Msg: Message> AskActor<Msg> {
     }
 }
 
+#[async_trait::async_trait]
 impl<Msg: Message> Actor for AskActor<Msg> {
     type Msg = Msg;
 
-    fn recv(&mut self, ctx: &Context<Msg>, msg: Msg, _: Option<BasicActorRef>) {
-        if let Ok(mut tx) = self.tx.lock() {
-            tx.take().unwrap().send(msg).unwrap();
-        }
-        ctx.stop(ctx.myself());
+    async fn recv(&mut self, ctx: &Context<Msg>, msg: Msg, _: Option<BasicActorRef>) {
+        let mut tx = self.tx.lock().await;
+        tx.take().unwrap().send(msg).unwrap();
+        ctx.stop(ctx.myself()).await;
     }
 }

@@ -4,6 +4,7 @@ use riker::actors::*;
 #[derive(Clone, Default)]
 struct NewActor;
 
+#[async_trait::async_trait]
 impl Actor for NewActor {
     type Msg = NewActorMsg;
 
@@ -11,32 +12,49 @@ impl Actor for NewActor {
         Strategy::Stop
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out);
-        ctx.stop(ctx.myself());
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await;
+        ctx.stop(ctx.myself()).await;
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<u32> for NewActor {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: u32, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        _msg: u32,
+        _send_out: Option<BasicActorRef>,
+    ) {
         println!("u32");
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<String> for NewActor {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: String, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        _msg: String,
+        _send_out: Option<BasicActorRef>,
+    ) {
         println!("String");
     }
 }
 
 #[tokio::test]
 async fn run_derived_actor() {
-    let sys = ActorSystem::new().unwrap();
+    let sys = ActorSystem::new().await.unwrap();
 
-    let act = sys.actor_of::<NewActor>("act").unwrap();
+    let act = sys.actor_of::<NewActor>("act").await.unwrap();
 
     let msg = NewActorMsg::U32(1);
-    act.tell(msg, None);
+    act.tell(msg, None).await;
 
     // wait until all direct children of the user root are terminated
     while sys.user_root().has_children() {
@@ -55,6 +73,7 @@ where
     _b: B,
 }
 
+#[async_trait::async_trait]
 impl<A: Send + 'static, B: Send + 'static> Actor for GenericActor<A, B> {
     type Msg = GenericActorMsg;
 
@@ -62,26 +81,37 @@ impl<A: Send + 'static, B: Send + 'static> Actor for GenericActor<A, B> {
         Strategy::Stop
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out);
-        ctx.stop(ctx.myself());
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await;
+        ctx.stop(ctx.myself()).await;
     }
 }
 
+#[async_trait::async_trait]
 impl<A: Send + 'static, B: Send + 'static> Receive<String> for GenericActor<A, B> {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: String, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        _msg: String,
+        _send_out: Option<BasicActorRef>,
+    ) {
         println!("String");
     }
 }
 
 #[tokio::test]
 async fn run_derived_generic_actor() {
-    let sys = ActorSystem::new().unwrap();
+    let sys = ActorSystem::new().await.unwrap();
 
-    let act = sys.actor_of::<GenericActor<(), ()>>("act").unwrap();
+    let act = sys.actor_of::<GenericActor<(), ()>>("act").await.unwrap();
 
     let msg = GenericActorMsg::String("test".to_string());
-    act.tell(msg, None);
+    act.tell(msg, None).await;
 
     // wait until all direct children of the user root are terminated
     while sys.user_root().has_children() {
@@ -99,6 +129,7 @@ pub struct Message<T> {
 #[derive(Clone, Default)]
 struct GenericMsgActor;
 
+#[async_trait::async_trait]
 impl Actor for GenericMsgActor {
     type Msg = GenericMsgActorMsg;
 
@@ -106,14 +137,20 @@ impl Actor for GenericMsgActor {
         Strategy::Stop
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out);
-        ctx.stop(ctx.myself());
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await;
+        ctx.stop(ctx.myself()).await;
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<Message<String>> for GenericMsgActor {
-    fn receive(
+    async fn receive(
         &mut self,
         _ctx: &Context<Self::Msg>,
         msg: Message<String>,
@@ -125,14 +162,14 @@ impl Receive<Message<String>> for GenericMsgActor {
 
 #[tokio::test]
 async fn run_generic_message_actor() {
-    let sys = ActorSystem::new().unwrap();
+    let sys = ActorSystem::new().await.unwrap();
 
-    let act = sys.actor_of::<GenericMsgActor>("act").unwrap();
+    let act = sys.actor_of::<GenericMsgActor>("act").await.unwrap();
 
     let msg = GenericMsgActorMsg::Message(Message {
         inner: "test".to_string(),
     });
-    act.tell(msg, None);
+    act.tell(msg, None).await;
 
     // wait until all direct children of the user root are terminated
     while sys.user_root().has_children() {
@@ -155,6 +192,7 @@ mod test_mod {
 #[derive(Clone, Default)]
 struct PathMsgActor;
 
+#[async_trait::async_trait]
 impl Actor for PathMsgActor {
     type Msg = PathMsgActorMsg;
 
@@ -162,14 +200,20 @@ impl Actor for PathMsgActor {
         Strategy::Stop
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out);
-        ctx.stop(ctx.myself());
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await;
+        ctx.stop(ctx.myself()).await;
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<test_mod::GenericMessage<String>> for PathMsgActor {
-    fn receive(
+    async fn receive(
         &mut self,
         _ctx: &Context<Self::Msg>,
         msg: test_mod::GenericMessage<String>,
@@ -179,8 +223,9 @@ impl Receive<test_mod::GenericMessage<String>> for PathMsgActor {
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<test_mod::Message> for PathMsgActor {
-    fn receive(
+    async fn receive(
         &mut self,
         _ctx: &Context<Self::Msg>,
         _msg: test_mod::Message,
@@ -192,17 +237,17 @@ impl Receive<test_mod::Message> for PathMsgActor {
 
 #[tokio::test]
 async fn run_path_message_actor() {
-    let sys = ActorSystem::new().unwrap();
+    let sys = ActorSystem::new().await.unwrap();
 
-    let act = sys.actor_of::<PathMsgActor>("act").unwrap();
+    let act = sys.actor_of::<PathMsgActor>("act").await.unwrap();
 
     let msg = PathMsgActorMsg::TestModMessage(test_mod::Message);
-    act.tell(msg, None);
+    act.tell(msg, None).await;
 
     let generic_msg = PathMsgActorMsg::TestModGenericMessage(test_mod::GenericMessage {
         inner: "test".to_string(),
     });
-    act.tell(generic_msg, None);
+    act.tell(generic_msg, None).await;
 
     // wait until all direct children of the user root are terminated
     while sys.user_root().has_children() {

@@ -21,16 +21,28 @@ struct ScheduleOnce {
     probe: Option<TestProbe>,
 }
 
+#[async_trait::async_trait]
 impl Actor for ScheduleOnce {
     type Msg = ScheduleOnceMsg;
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out);
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await;
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<TestProbe> for ScheduleOnce {
-    fn receive(&mut self, ctx: &Context<ScheduleOnceMsg>, msg: TestProbe, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        ctx: &Context<ScheduleOnceMsg>,
+        msg: TestProbe,
+        _send_out: Option<BasicActorRef>,
+    ) {
         self.probe = Some(msg);
         // reschedule an Empty to be sent to myself()
         ctx.schedule_once(
@@ -38,40 +50,49 @@ impl Receive<TestProbe> for ScheduleOnce {
             ctx.myself().clone(),
             None,
             SomeMessage,
-        );
+        )
+        .await;
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<SomeMessage> for ScheduleOnce {
-    fn receive(&mut self, _ctx: &Context<ScheduleOnceMsg>, _msg: SomeMessage, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &Context<ScheduleOnceMsg>,
+        _msg: SomeMessage,
+        _send_out: Option<BasicActorRef>,
+    ) {
         self.probe.as_ref().unwrap().0.event(());
     }
 }
 
 #[tokio::test]
 async fn schedule_once() {
-    let sys = ActorSystem::new().unwrap();
+    let sys = ActorSystem::new().await.unwrap();
 
-    let actor = sys.actor_of::<ScheduleOnce>("schedule-once").unwrap();
+    let actor = sys.actor_of::<ScheduleOnce>("schedule-once").await.unwrap();
 
     let (probe, mut listen) = probe();
 
     // use scheduler to set up probe
-    sys.schedule_once(Duration::from_millis(200), actor, None, TestProbe(probe));
+    sys.schedule_once(Duration::from_millis(200), actor, None, TestProbe(probe))
+        .await;
     p_assert_eq!(listen, ());
 }
 
 #[tokio::test]
 async fn schedule_at_time() {
-    let sys = ActorSystem::new().unwrap();
+    let sys = ActorSystem::new().await.unwrap();
 
-    let actor = sys.actor_of::<ScheduleOnce>("schedule-once").unwrap();
+    let actor = sys.actor_of::<ScheduleOnce>("schedule-once").await.unwrap();
 
     let (probe, mut listen) = probe();
 
     // use scheduler to set up probe at a specific time
     let schedule_at = Utc::now() + CDuration::milliseconds(200);
-    sys.schedule_at_time(schedule_at, actor, None, TestProbe(probe));
+    sys.schedule_at_time(schedule_at, actor, None, TestProbe(probe))
+        .await;
     p_assert_eq!(listen, ());
 }
 
@@ -84,34 +105,54 @@ struct ScheduleRepeat {
     schedule_id: Option<ScheduleId>,
 }
 
+#[async_trait::async_trait]
 impl Actor for ScheduleRepeat {
     type Msg = ScheduleRepeatMsg;
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out);
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await;
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<TestProbe> for ScheduleRepeat {
-    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: TestProbe, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: TestProbe,
+        _send_out: Option<BasicActorRef>,
+    ) {
         self.probe = Some(msg);
         // schedule Message to be repeatedly sent to myself
         // and store the job id to cancel it later
-        let id = ctx.schedule(
-            Duration::from_millis(200),
-            Duration::from_millis(200),
-            ctx.myself().clone(),
-            None,
-            SomeMessage,
-        );
+        let id = ctx
+            .schedule(
+                Duration::from_millis(200),
+                Duration::from_millis(200),
+                ctx.myself().clone(),
+                None,
+                SomeMessage,
+            )
+            .await;
         self.schedule_id = Some(id);
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<SomeMessage> for ScheduleRepeat {
-    fn receive(&mut self, ctx: &Context<Self::Msg>, _msg: SomeMessage, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        _msg: SomeMessage,
+        _send_out: Option<BasicActorRef>,
+    ) {
         if self.counter == 5 {
-            ctx.cancel_schedule(self.schedule_id.unwrap());
+            ctx.cancel_schedule(self.schedule_id.unwrap()).await;
             self.probe.as_ref().unwrap().0.event(());
         } else {
             self.counter += 1;
@@ -121,13 +162,16 @@ impl Receive<SomeMessage> for ScheduleRepeat {
 
 #[tokio::test]
 async fn schedule_repeat() {
-    let sys = ActorSystem::new().unwrap();
+    let sys = ActorSystem::new().await.unwrap();
 
-    let actor = sys.actor_of::<ScheduleRepeat>("schedule-repeat").unwrap();
+    let actor = sys
+        .actor_of::<ScheduleRepeat>("schedule-repeat")
+        .await
+        .unwrap();
 
     let (probe, mut listen) = probe();
 
-    actor.tell(TestProbe(probe), None);
+    actor.tell(TestProbe(probe), None).await;
 
     p_assert_eq!(listen, ());
 }

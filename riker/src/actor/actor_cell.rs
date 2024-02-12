@@ -125,30 +125,33 @@ impl ActorCell {
         self.inner.system.user_root().is_child(&self.myself())
     }
 
-    pub(crate) fn send_any_msg(
+    pub(crate) async fn send_any_msg(
         &self,
         msg: &mut AnyMessage,
-        send_out: Option<BasicActorRef>
+        send_out: Option<BasicActorRef>,
     ) -> Result<(), AnyEnqueueError> {
         let mb = &self.inner.mailbox;
         let k = self.kernel();
 
-        dispatch_any(msg, send_out, mb, k, &self.inner.system)
+        dispatch_any(msg, send_out, mb, k, &self.inner.system).await
     }
 
-    pub(crate) fn send_sys_msg(&self, msg: Envelope<SystemMsg>) -> MsgResult<Envelope<SystemMsg>> {
+    pub(crate) async fn send_sys_msg(
+        &self,
+        msg: Envelope<SystemMsg>,
+    ) -> MsgResult<Envelope<SystemMsg>> {
         let mb = &self.inner.sys_mailbox;
 
         let k = self.kernel();
-        dispatch(msg, mb, k, &self.inner.system)
+        dispatch(msg, mb, k, &self.inner.system).await
     }
 
     pub(crate) fn is_child(&self, actor: &BasicActorRef) -> bool {
         self.inner.children.iter().any(|child| child == *actor)
     }
 
-    pub(crate) fn stop(&self, actor: &BasicActorRef) {
-        actor.sys_tell(SystemCmd::Stop.into());
+    pub(crate) async fn stop(&self, actor: &BasicActorRef) {
+        actor.sys_tell(SystemCmd::Stop.into()).await;
     }
 
     pub fn add_child(&self, actor: BasicActorRef) {
@@ -159,14 +162,14 @@ impl ActorCell {
         self.inner.children.remove(actor)
     }
 
-    pub fn receive_cmd<A: Actor>(&self, cmd: SystemCmd, actor: &mut Option<A>) {
+    pub async fn receive_cmd<A: Actor>(&self, cmd: SystemCmd, actor: &mut Option<A>) {
         match cmd {
-            SystemCmd::Stop => self.terminate(actor),
-            SystemCmd::Restart => self.restart(),
+            SystemCmd::Stop => self.terminate(actor).await,
+            SystemCmd::Restart => self.restart().await,
         }
     }
 
-    pub fn terminate<A: Actor>(&self, actor: &mut Option<A>) {
+    pub async fn terminate<A: Actor>(&self, actor: &mut Option<A>) {
         // *1. Suspend non-system mailbox messages
         // *2. Iterate all children and send Stop to each
         // *3. Wait for ActorTerminated from each child
@@ -175,26 +178,26 @@ impl ActorCell {
 
         if !self.has_children() {
             self.kernel().terminate(&self.inner.system);
-            post_stop(actor);
+            post_stop(actor).await;
         } else {
             for child in self.inner.children.iter() {
-                self.stop(&child);
+                self.stop(&child).await;
             }
         }
     }
 
-    pub fn restart(&self) {
+    pub async fn restart(&self) {
         if !self.has_children() {
             self.kernel().restart(&self.inner.system);
         } else {
             self.inner.is_restarting.store(true, Ordering::Relaxed);
             for child in self.inner.children.iter() {
-                self.stop(&child);
+                self.stop(&child).await;
             }
         }
     }
 
-    pub fn death_watch<A: Actor>(&self, terminated: &BasicActorRef, actor: &mut Option<A>) {
+    pub async fn death_watch<A: Actor>(&self, terminated: &BasicActorRef, actor: &mut Option<A>) {
         if self.is_child(&terminated) {
             self.remove_child(terminated);
 
@@ -202,7 +205,7 @@ impl ActorCell {
                 // No children exist. Stop this actor's kernel.
                 if self.inner.is_terminating.load(Ordering::Relaxed) {
                     self.kernel().terminate(&self.inner.system);
-                    post_stop(actor);
+                    post_stop(actor).await;
                 }
 
                 // No children exist. Restart the actor.
@@ -214,24 +217,25 @@ impl ActorCell {
         }
     }
 
-    pub fn handle_failure(&self, failed: BasicActorRef, strategy: Strategy) {
+    pub async fn handle_failure(&self, failed: BasicActorRef, strategy: Strategy) {
         match strategy {
-            Strategy::Stop => self.stop(&failed),
-            Strategy::Restart => self.restart_child(&failed),
-            Strategy::Escalate => self.escalate_failure(),
+            Strategy::Stop => self.stop(&failed).await,
+            Strategy::Restart => self.restart_child(&failed).await,
+            Strategy::Escalate => self.escalate_failure().await,
         }
     }
 
-    pub fn restart_child(&self, actor: &BasicActorRef) {
-        actor.sys_tell(SystemCmd::Restart.into());
+    pub async fn restart_child(&self, actor: &BasicActorRef) {
+        actor.sys_tell(SystemCmd::Restart.into()).await;
     }
 
-    pub fn escalate_failure(&self) {
+    pub async fn escalate_failure(&self) {
         self.inner
             .parent
             .as_ref()
             .unwrap()
-            .sys_tell(SystemMsg::Failed(self.myself()));
+            .sys_tell(SystemMsg::Failed(self.myself()))
+            .await;
     }
 }
 
@@ -247,47 +251,50 @@ impl fmt::Debug for ActorCell {
     }
 }
 
-impl TmpActorRefFactory for ActorCell {
-    fn tmp_actor_of_props<A: Actor>(
-        &self,
-        _props: BoxActorProd<A>,
-    ) -> Result<ActorRef<A::Msg>, CreateError> {
-        let name = rand::random::<u64>();
-        let _name = format!("{}", name);
+// #[async_trait::async_trait]
+// impl TmpActorRefFactory for ActorCell {
+//     async fn tmp_actor_of_props<A: Actor>(
+//         &self,
+//         _props: BoxActorProd<A>,
+//     ) -> Result<ActorRef<A::Msg>, CreateError> {
+//         let name = rand::random::<u64>();
+//         let _name = format!("{}", name);
 
-        // self.inner
-        //     .kernel
-        //     .create_actor(props, &name, &self.inner.system.temp_root())
-        unimplemented!()
-    }
+//         // self.inner
+//         //     .kernel
+//         //     .create_actor(props, &name, &self.inner.system.temp_root())
+//         unimplemented!()
+//     }
 
-    fn tmp_actor_of<A: ActorFactory>(&self) -> Result<ActorRef<<A as Actor>::Msg>, CreateError> {
-        let name = rand::random::<u64>();
-        let _name = format!("{}", name);
+//     async fn tmp_actor_of<A: ActorFactory>(
+//         &self,
+//     ) -> Result<ActorRef<<A as Actor>::Msg>, CreateError> {
+//         let name = rand::random::<u64>();
+//         let _name = format!("{}", name);
 
-        // self.inner
-        //     .kernel
-        //     .create_actor(props, &name, &self.inner.system.temp_root())
-        unimplemented!()
-    }
+//         // self.inner
+//         //     .kernel
+//         //     .create_actor(props, &name, &self.inner.system.temp_root())
+//         unimplemented!()
+//     }
 
-    fn tmp_actor_of_args<A, Args>(
-        &self,
-        _args: Args,
-    ) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
-    where
-        Args: ActorArgs,
-        A: ActorFactoryArgs<Args>,
-    {
-        let name = rand::random::<u64>();
-        let _name = format!("{}", name);
+//     async fn tmp_actor_of_args<A, Args>(
+//         &self,
+//         _args: Args,
+//     ) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
+//     where
+//         Args: ActorArgs,
+//         A: ActorFactoryArgs<Args>,
+//     {
+//         let name = rand::random::<u64>();
+//         let _name = format!("{}", name);
 
-        // self.inner
-        //     .kernel
-        //     .create_actor(props, &name, &self.inner.system.temp_root())
-        unimplemented!()
-    }
-}
+//         // self.inner
+//         //     .kernel
+//         //     .create_actor(props, &name, &self.inner.system.temp_root())
+//         unimplemented!()
+//     }
+// }
 
 #[derive(Clone)]
 pub struct ExtendedCell<Msg: Message> {
@@ -368,48 +375,63 @@ where
         self.cell.is_user()
     }
 
-    pub(crate) fn send_msg(&self, msg: Envelope<Msg>) -> MsgResult<Envelope<Msg>> {
+    pub(crate) async fn send_msg(&self, msg: Envelope<Msg>) -> MsgResult<Envelope<Msg>> {
         let mb = &self.mailbox;
         let k = self.cell.kernel();
 
-        dispatch(msg, mb, k, &self.system()).map_err(|e| {
-            let dl = e.clone(); // clone the failed message and send to dead letters
-            let dl = DeadLetter {
-                msg: format!("{:?}", dl.msg.msg),
-                send_out: dl.msg.send_out,
-                recipient: self.cell.myself(),
-            };
+        match dispatch(msg, mb, k, &self.system()).await {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                let dl = e.clone(); // clone the failed message and send to dead letters
+                let dl = DeadLetter {
+                    msg: format!("{:?}", dl.msg.msg),
+                    send_out: dl.msg.send_out,
+                    recipient: self.cell.myself(),
+                };
 
-            self.cell.inner.system.dead_letters().tell(
-                Publish {
-                    topic: "dead_letter".into(),
-                    msg: dl,
-                },
-                None,
-            );
+                self.cell
+                    .inner
+                    .system
+                    .dead_letters()
+                    .tell(
+                        Publish {
+                            topic: "dead_letter".into(),
+                            msg: dl,
+                        },
+                        None,
+                    )
+                    .await;
 
-            e
-        })
+                Err(e)
+            }
+        }
     }
 
-    pub(crate) fn send_sys_msg(&self, msg: Envelope<SystemMsg>) -> MsgResult<Envelope<SystemMsg>> {
-        self.cell.send_sys_msg(msg)
+    pub(crate) async fn send_sys_msg(
+        &self,
+        msg: Envelope<SystemMsg>,
+    ) -> MsgResult<Envelope<SystemMsg>> {
+        self.cell.send_sys_msg(msg).await
     }
 
     pub fn system(&self) -> &ActorSystem {
         &self.cell.inner.system
     }
 
-    pub(crate) fn handle_failure(&self, failed: BasicActorRef, strategy: Strategy) {
-        self.cell.handle_failure(failed, strategy)
+    pub(crate) async fn handle_failure(&self, failed: BasicActorRef, strategy: Strategy) {
+        self.cell.handle_failure(failed, strategy).await
     }
 
-    pub(crate) fn receive_cmd<A: Actor>(&self, cmd: SystemCmd, actor: &mut Option<A>) {
-        self.cell.receive_cmd(cmd, actor)
+    pub(crate) async fn receive_cmd<A: Actor>(&self, cmd: SystemCmd, actor: &mut Option<A>) {
+        self.cell.receive_cmd(cmd, actor).await
     }
 
-    pub(crate) fn death_watch<A: Actor>(&self, terminated: &BasicActorRef, actor: &mut Option<A>) {
-        self.cell.death_watch(terminated, actor)
+    pub(crate) async fn death_watch<A: Actor>(
+        &self,
+        terminated: &BasicActorRef,
+        actor: &mut Option<A>,
+    ) {
+        self.cell.death_watch(terminated, actor).await
     }
 }
 
@@ -419,12 +441,12 @@ impl<Msg: Message> fmt::Debug for ExtendedCell<Msg> {
     }
 }
 
-fn post_stop<A: Actor>(actor: &mut Option<A>) {
+async fn post_stop<A: Actor>(actor: &mut Option<A>) {
     // If the actor instance exists we can execute post_stop.
     // The instance will be None if this is an actor that has failed
     // and is being terminated by an escalated supervisor.
     if let Some(act) = actor.as_mut() {
-        act.post_stop();
+        act.post_stop().await;
     }
 }
 
@@ -468,8 +490,9 @@ where
     }
 }
 
+#[async_trait::async_trait]
 impl<Msg: Message> ActorRefFactory for Context<Msg> {
-    fn actor_of_props<A>(
+    async fn actor_of_props<A>(
         &self,
         name: &str,
         props: BoxActorProd<A>,
@@ -480,21 +503,25 @@ impl<Msg: Message> ActorRefFactory for Context<Msg> {
         self.system
             .provider
             .create_actor(props, name, &self.myself().clone().into(), &self.system)
+            .await
     }
 
-    fn actor_of<A>(&self, name: &str) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
+    async fn actor_of<A>(&self, name: &str) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
     where
         A: ActorFactory,
     {
-        self.system.provider.create_actor(
-            Props::new::<A>(),
-            name,
-            &self.myself().clone().into(),
-            self.system(),
-        )
+        self.system
+            .provider
+            .create_actor(
+                Props::new::<A>(),
+                name,
+                &self.myself().clone().into(),
+                self.system(),
+            )
+            .await
     }
 
-    fn actor_of_args<A, Args>(
+    async fn actor_of_args<A, Args>(
         &self,
         name: &str,
         args: Args,
@@ -503,16 +530,19 @@ impl<Msg: Message> ActorRefFactory for Context<Msg> {
         Args: ActorArgs,
         A: ActorFactoryArgs<Args>,
     {
-        self.system.provider.create_actor(
-            Props::new_args::<A, _>(args),
-            name,
-            &self.myself().clone().into(),
-            self.system(),
-        )
+        self.system
+            .provider
+            .create_actor(
+                Props::new_args::<A, _>(args),
+                name,
+                &self.myself().clone().into(),
+                self.system(),
+            )
+            .await
     }
 
-    fn stop(&self, actor: impl SysTell) {
-        actor.sys_tell(SystemCmd::Stop.into());
+    async fn stop(&self, actor: impl SysTell) {
+        actor.sys_tell(SystemCmd::Stop.into()).await;
     }
 }
 
@@ -571,11 +601,12 @@ where
     }
 }
 
+#[async_trait::async_trait]
 impl<Msg> Timer for Context<Msg>
 where
     Msg: Message,
 {
-    fn schedule<T, M>(
+    async fn schedule<T, M>(
         &self,
         initial_delay: Duration,
         interval: Duration,
@@ -599,11 +630,11 @@ where
             msg: AnyMessage::new(msg, false),
         };
 
-        self.system.timer.send(Job::Repeat(job)).unwrap();
+        let _ = self.system.timer.send(Job::Repeat(job)).await;
         id
     }
 
-    fn schedule_once<T, M>(
+    async fn schedule_once<T, M>(
         &self,
         delay: Duration,
         receiver: ActorRef<M>,
@@ -625,11 +656,11 @@ where
             msg: AnyMessage::new(msg, true),
         };
 
-        self.system.timer.send(Job::Once(job)).unwrap();
+        let _ = self.system.timer.send(Job::Once(job)).await;
         id
     }
 
-    fn schedule_at_time<T, M>(
+    async fn schedule_at_time<T, M>(
         &self,
         time: DateTime<Utc>,
         receiver: ActorRef<M>,
@@ -654,12 +685,12 @@ where
             msg: AnyMessage::new(msg, true),
         };
 
-        self.system.timer.send(Job::Once(job)).unwrap();
+        let _ = self.system.timer.send(Job::Once(job)).await;
         id
     }
 
-    fn cancel_schedule(&self, id: Uuid) {
-        let _ = self.system.timer.send(Job::Cancel(id));
+    async fn cancel_schedule(&self, id: Uuid) {
+        let _ = self.system.timer.send(Job::Cancel(id)).await;
     }
 }
 
