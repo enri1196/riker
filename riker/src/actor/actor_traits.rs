@@ -1,7 +1,11 @@
-use crate::{actors::{ActorSystem, SystemMsg}, Message};
+use crate::{
+    actors::{ActorSystem, SystemMsg},
+    Message,
+};
 
 use super::{
-    actor_cell::Children, actor_ref::BoxedTell, ActorArgs, ActorFactory, ActorFactoryArgs, ActorPath, ActorRef, ActorUri, BasicActorRef, BoxActorProd, Context, CreateError, Strategy
+    actor_cell::Children, actor_ref::BoxedTell, ActorArgs, ActorFactory, ActorFactoryArgs,
+    ActorPath, ActorRef, ActorUri, BasicActorRef, BoxActorProd, Context, CreateError, Strategy,
 };
 
 #[async_trait::async_trait]
