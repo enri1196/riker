@@ -41,7 +41,7 @@ where
     type Msg = ChannelMsg<Msg>;
 
     // todo subscribe to events to unsub subscribers when they die
-    async fn pre_start(&mut self, ctx: &ChannelCtx<Msg>) {
+    async fn pre_start(&mut self, _ctx: &ChannelCtx<Msg>) {
         // let sub = Subscribe {
         //     topic: SysTopic::ActorTerminated.into(),
         //     actor: Box::new(ctx.myself.clone())//.into()
@@ -67,7 +67,7 @@ where
         &mut self,
         _: &ChannelCtx<Msg>,
         msg: SystemMsg,
-        send_out: Option<BasicActorRef>,
+        _send_out: Option<BasicActorRef>,
     ) {
         if let SystemMsg::Event(evt) = msg {
             if let SystemEvent::ActorTerminated(terminated) = evt {
@@ -108,9 +108,9 @@ where
 {
     async fn receive(
         &mut self,
-        ctx: &ChannelCtx<Msg>,
+        _ctx: &ChannelCtx<Msg>,
         msg: Subscribe<Msg>,
-        send_out: Option<BasicActorRef>,
+        _send_out: Option<BasicActorRef>,
     ) {
         let subs = self.subs.entry(msg.topic).or_default();
         subs.push(msg.actor);
@@ -124,9 +124,9 @@ where
 {
     async fn receive(
         &mut self,
-        ctx: &ChannelCtx<Msg>,
+        _ctx: &ChannelCtx<Msg>,
         msg: Unsubscribe<Msg>,
-        send_out: Option<BasicActorRef>,
+        _send_out: Option<BasicActorRef>,
     ) {
         unsubscribe(&mut self.subs, &msg.topic, &msg.actor);
     }
@@ -139,9 +139,9 @@ where
 {
     async fn receive(
         &mut self,
-        ctx: &ChannelCtx<Msg>,
+        _ctx: &ChannelCtx<Msg>,
         msg: UnsubscribeAll<Msg>,
-        send_out: Option<BasicActorRef>,
+        _send_out: Option<BasicActorRef>,
     ) {
         let subs = self.subs.clone();
 
@@ -158,7 +158,7 @@ where
 {
     async fn receive(
         &mut self,
-        ctx: &ChannelCtx<Msg>,
+        _ctx: &ChannelCtx<Msg>,
         msg: Publish<Msg>,
         send_out: Option<BasicActorRef>,
     ) {
@@ -246,9 +246,9 @@ impl Receive<ChannelMsg<SystemEvent>> for EventsChannel {
 impl Receive<Publish<SystemEvent>> for EventsChannel {
     async fn receive(
         &mut self,
-        ctx: &ChannelCtx<SystemEvent>,
+        _ctx: &ChannelCtx<SystemEvent>,
         msg: Publish<SystemEvent>,
-        send_out: Option<BasicActorRef>,
+        _send_out: Option<BasicActorRef>,
     ) {
         // send system event to actors subscribed to all topics
         if let Some(subs) = self.0.subs.get(&All.into()) {
@@ -376,7 +376,7 @@ impl<'a> From<&'a SystemEvent> for Topic {
 pub struct All;
 
 impl From<All> for Topic {
-    fn from(all: All) -> Self {
+    fn from(_all: All) -> Self {
         Topic::from("*")
     }
 }

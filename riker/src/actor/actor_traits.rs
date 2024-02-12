@@ -15,7 +15,7 @@ pub trait Actor: Send + 'static {
     ///
     /// Panics in `pre_start` do not invoke the
     /// supervision strategy and the actor will be terminated.
-    async fn pre_start(&mut self, ctx: &Context<Self::Msg>) {}
+    async fn pre_start(&mut self, _ctx: &Context<Self::Msg>) {}
 
     /// Invoked after an actor has started.
     ///
@@ -23,7 +23,7 @@ pub trait Actor: Send + 'static {
     /// to a log file, emmitting metrics.
     ///
     /// Panics in `post_start` follow the supervision strategy.
-    async fn post_start(&mut self, ctx: &Context<Self::Msg>) {}
+    async fn post_start(&mut self, _ctx: &Context<Self::Msg>) {}
 
     /// Invoked after an actor has been stopped.
     async fn post_stop(&mut self) {}
@@ -39,9 +39,9 @@ pub trait Actor: Send + 'static {
     /// at any one time, including `recv` and `sys_recv`.
     async fn sys_recv(
         &mut self,
-        ctx: &Context<Self::Msg>,
-        msg: SystemMsg,
-        send_out: Option<BasicActorRef>,
+        _ctx: &Context<Self::Msg>,
+        _msg: SystemMsg,
+        _send_out: Option<BasicActorRef>,
     ) {
     }
 

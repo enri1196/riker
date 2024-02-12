@@ -1,4 +1,3 @@
-#![allow(unused_variables)]
 pub(crate) mod actor_cell;
 pub(crate) mod actor_ref;
 pub(crate) mod actor_traits;
@@ -29,7 +28,6 @@ pub use self::{
 
 use crate::system::SystemMsg;
 
-#[allow(unused)]
 pub type MsgResult<T> = Result<(), MsgError<T>>;
 
 /// Internal message error when a message can't be added to an actor's mailbox
