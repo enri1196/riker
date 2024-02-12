@@ -69,7 +69,7 @@ impl<Msg: Message> Ask<Msg> for ActorRef<Msg> {
     fn ask<Ret: Message>(&self, msg: Msg) -> JoinHandle<Ret> {
         let my_self = self.clone();
         let sys = self.cell.system().clone();
-        self.cell.system().run(async move {
+        self.system().run(async move {
             let (tx, rx) = channel::<Ret>();
             let tx = Arc::new(Mutex::new(Some(tx)));
             let props = Props::new_from_args(Box::new(AskActor::new), tx);
