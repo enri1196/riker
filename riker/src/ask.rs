@@ -32,10 +32,11 @@ use tokio::task::JoinHandle;
 /// #[derive(Default)]
 /// struct Reply;
 ///
+/// #[async_trait::async_trait]
 /// impl Actor for Reply {
 ///    type Msg = String;
 ///
-///    fn recv(&mut self,
+///    async fn recv(&mut self,
 ///                 ctx: &Context<Self::Msg>,
 ///                 msg: Self::Msg,
 ///                 send_out: Option<BasicActorRef>) {
@@ -48,14 +49,14 @@ use tokio::task::JoinHandle;
 ///
 /// // set up the actor system
 /// # tokio_test::block_on(async {
-/// let sys = ActorSystem::new().unwrap();
+/// let sys = ActorSystem::new().await.unwrap();
 ///
 /// // create instance of Reply actor
-/// let actor = sys.actor_of::<Reply>("reply").unwrap();
+/// let actor = sys.actor_of::<Reply>("reply").await.unwrap();
 ///
 /// // ask the actor
 /// let msg = "Will Riker".to_string();
-/// let r: JoinHandle<String> = actor.ask(msg);
+/// let r = actor.ask::<String>(msg);
 ///
 /// assert_eq!(r.await.unwrap(), "Hello Will Riker".to_string());
 /// # })
@@ -68,7 +69,7 @@ impl<Msg: Message> Ask<Msg> for ActorRef<Msg> {
     fn ask<Ret: Message>(&self, msg: Msg) -> JoinHandle<Ret> {
         let my_self = self.clone();
         let sys = self.cell.system().clone();
-        tokio::spawn(async move {
+        self.cell.system().run(async move {
             let (tx, rx) = channel::<Ret>();
             let tx = Arc::new(Mutex::new(Some(tx)));
             let props = Props::new_from_args(Box::new(AskActor::new), tx);
@@ -82,8 +83,8 @@ impl<Msg: Message> Ask<Msg> for ActorRef<Msg> {
 impl<Msg: Message> Ask<Msg> for BasicActorRef {
     fn ask<Ret: Message>(&self, msg: Msg) -> JoinHandle<Ret> {
         let my_self = self.clone();
-        let sys = self.cell.system().clone();
-        tokio::spawn(async move {
+        let sys = self.system().clone();
+        self.system().run(async move {
             let (tx, rx) = channel::<Ret>();
             let tx = Arc::new(Mutex::new(Some(tx)));
             let props = Props::new_from_args(Box::new(AskActor::new), tx);

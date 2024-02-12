@@ -94,6 +94,10 @@ impl<Msg: Message> ActorReference for ActorRef<Msg> {
         self.cell.uri()
     }
 
+    fn system(&self) -> &ActorSystem {
+        self.cell.system()
+    }
+
     /// Actor path.
     ///
     /// e.g. `/user/actor_a/actor_b`
@@ -143,6 +147,10 @@ impl<Msg: Message> ActorReference for &ActorRef<Msg> {
 
     fn uri(&self) -> &ActorUri {
         self.cell.uri()
+    }
+
+    fn system(&self) -> &ActorSystem {
+        self.cell.system()
     }
 
     /// Actor path.
@@ -223,6 +231,10 @@ where
 
     fn uri(&self) -> &ActorUri {
         self.0.uri()
+    }
+
+    fn system(&self) -> &ActorSystem {
+        self.0.system()
     }
 
     /// Actor path.
@@ -367,6 +379,10 @@ impl ActorReference for BasicActorRef {
         self.cell.uri()
     }
 
+    fn system(&self) -> &ActorSystem {
+        self.cell.system()
+    }
+
     /// Actor path.
     ///
     /// e.g. `/user/actor_a/actor_b`
@@ -422,6 +438,10 @@ impl ActorReference for &BasicActorRef {
 
     fn uri(&self) -> &ActorUri {
         self.cell.uri()
+    }
+
+    fn system(&self) -> &ActorSystem {
+        self.cell.system()
     }
 
     /// Actor path.

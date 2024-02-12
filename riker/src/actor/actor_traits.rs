@@ -1,4 +1,4 @@
-use crate::{actors::SystemMsg, Message};
+use crate::{actors::{ActorSystem, SystemMsg}, Message};
 
 use super::{
     actor_cell::Children, actor_ref::BoxedTell, ActorArgs, ActorFactory, ActorFactoryArgs, ActorPath, ActorRef, ActorUri, BasicActorRef, BoxActorProd, Context, CreateError, Strategy
@@ -68,6 +68,8 @@ pub trait ActorReference {
     /// Returns the URI for this actor.
     fn uri(&self) -> &ActorUri;
 
+    fn system(&self) -> &ActorSystem;
+
     /// Actor path.
     ///
     /// e.g. `/user/actor_a/actor_b`
@@ -117,7 +119,7 @@ pub trait SysTell: ActorReference + Send {
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust
 /// # use riker::actors::*;
 ///
 /// #[derive(Clone, Debug)]
@@ -128,19 +130,21 @@ pub trait SysTell: ActorReference + Send {
 /// #[derive(Default)]
 /// struct MyActor;
 ///
+/// #[async_trait::async_trait]
 /// impl Actor for MyActor {
 ///     type Msg = MyActorMsg; // <-- MyActorMsg is provided for us
 ///
-///     fn recv(&mut self,
+///     async fn recv(&mut self,
 ///                 ctx: &Context<Self::Msg>,
 ///                 msg: Self::Msg,
 ///                 send_out: Option<BasicActorRef>) {
-///         self.receive(ctx, msg, send_out); // <-- call the respective implementation
+///         self.receive(ctx, msg, send_out).await; // <-- call the respective implementation
 ///     }
 /// }
 ///
+/// #[async_trait::async_trait]
 /// impl Receive<Foo> for MyActor {
-///     fn receive(&mut self,
+///     async fn receive(&mut self,
 ///                 ctx: &Context<Self::Msg>,
 ///                 msg: Foo, // <-- receive Foo
 ///                 send_out: Option<BasicActorRef>) {
@@ -148,8 +152,9 @@ pub trait SysTell: ActorReference + Send {
 ///     }
 /// }
 ///
+/// #[async_trait::async_trait]
 /// impl Receive<Bar> for MyActor {
-///     fn receive(&mut self,
+///     async fn receive(&mut self,
 ///                 ctx: &Context<Self::Msg>,
 ///                 msg: Bar, // <-- receive Bar
 ///                 send_out: Option<BasicActorRef>) {
@@ -159,11 +164,11 @@ pub trait SysTell: ActorReference + Send {
 ///
 /// // main
 /// # tokio_test::block_on(async {
-/// let sys = ActorSystem::new().unwrap();
-/// let actor = sys.actor_of::<MyActor>("my-actor").unwrap();
+/// let sys = ActorSystem::new().await.unwrap();
+/// let actor = sys.actor_of::<MyActor>("my-actor").await.unwrap();
 ///
-/// actor.tell(Foo, None);
-/// actor.tell(Bar, None);
+/// actor.tell(Foo, None).await;
+/// actor.tell(Bar, None).await;
 /// })
 /// ```
 #[async_trait::async_trait]
