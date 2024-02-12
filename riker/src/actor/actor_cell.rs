@@ -251,51 +251,6 @@ impl fmt::Debug for ActorCell {
     }
 }
 
-// #[async_trait::async_trait]
-// impl TmpActorRefFactory for ActorCell {
-//     async fn tmp_actor_of_props<A: Actor>(
-//         &self,
-//         _props: BoxActorProd<A>,
-//     ) -> Result<ActorRef<A::Msg>, CreateError> {
-//         let name = rand::random::<u64>();
-//         let _name = format!("{}", name);
-
-//         // self.inner
-//         //     .kernel
-//         //     .create_actor(props, &name, &self.inner.system.temp_root())
-//         unimplemented!()
-//     }
-
-//     async fn tmp_actor_of<A: ActorFactory>(
-//         &self,
-//     ) -> Result<ActorRef<<A as Actor>::Msg>, CreateError> {
-//         let name = rand::random::<u64>();
-//         let _name = format!("{}", name);
-
-//         // self.inner
-//         //     .kernel
-//         //     .create_actor(props, &name, &self.inner.system.temp_root())
-//         unimplemented!()
-//     }
-
-//     async fn tmp_actor_of_args<A, Args>(
-//         &self,
-//         _args: Args,
-//     ) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
-//     where
-//         Args: ActorArgs,
-//         A: ActorFactoryArgs<Args>,
-//     {
-//         let name = rand::random::<u64>();
-//         let _name = format!("{}", name);
-
-//         // self.inner
-//         //     .kernel
-//         //     .create_actor(props, &name, &self.inner.system.temp_root())
-//         unimplemented!()
-//     }
-// }
-
 #[derive(Clone)]
 pub struct ExtendedCell<Msg: Message> {
     cell: ActorCell,
