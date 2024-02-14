@@ -390,7 +390,7 @@ impl ActorSystem {
                 })
             } else {
                 let mut children_json = Vec::new();
-                for actor in node.children() {
+                for actor in node.children().iter() {
                     let child_json = node_to_json(sys, &actor);
                     children_json.push(child_json);
                 }
