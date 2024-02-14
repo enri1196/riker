@@ -381,7 +381,7 @@ impl ActorSystem {
         fn node_to_json(sys: &ActorSystem, node: &BasicActorRef) -> Value {
             if node.is_root() {
                 let mut children_json = Vec::new();
-                for actor in node.children() {
+                for actor in node.children().iter() {
                     let child_json = node_to_json(sys, &actor);
                     children_json.push(child_json);
                 }
@@ -414,7 +414,7 @@ impl ActorSystem {
         ) {
             nodes.push(json!({ "id": node.name() }));
 
-            for actor in node.children() {
+            for actor in node.children().iter() {
                 edges.push(json!({ "from": node.name(), "to": actor.name() }));
                 node_to_json(sys, &actor, nodes, edges);
             }
