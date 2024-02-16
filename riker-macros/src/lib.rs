@@ -5,7 +5,7 @@ use quote::quote;
 use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::token::{Colon2, Comma};
+use syn::token::{Comma, PathSep};
 use syn::{DeriveInput, Generics, PathSegment, TypePath};
 
 struct MsgTypes {
@@ -51,7 +51,7 @@ impl Parse for MsgTypes {
     }
 }
 
-fn get_name(segments: &Punctuated<PathSegment, Colon2>) -> Ident {
+fn get_name(segments: &Punctuated<PathSegment, PathSep>) -> Ident {
     let vname = segments
         .iter()
         .map(|seg| {

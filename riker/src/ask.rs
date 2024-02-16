@@ -41,7 +41,7 @@ use tokio::task::JoinHandle;
 ///         // reply to the temporary ask actor
 ///         send_out.as_ref().unwrap().try_tell(
 ///             format!("Hello {}", msg), None
-///         ).unwrap();
+///         ).await.unwrap();
 ///     }
 /// }
 ///

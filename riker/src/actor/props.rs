@@ -33,18 +33,19 @@ impl Props {
     ///     }
     /// }
     ///
+    /// # #[async_trait::async_trait]
     /// # impl Actor for User {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
+    /// #    async fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
-    /// let sys = ActorSystem::new().unwrap();
+    /// let sys = ActorSystem::new().await.unwrap();
     ///
     /// let props = Props::new_from(User::actor);
     ///
     /// // start the actor and get an `ActorRef`
-    /// let actor = sys.actor_of_props("user", props).unwrap();
+    /// let actor = sys.actor_of_props("user", props).await.unwrap();
     /// })
     /// ```
     #[inline]
@@ -75,17 +76,18 @@ impl Props {
     ///     }
     /// }
     ///
+    /// # #[async_trait::async_trait]
     /// # impl Actor for User {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
+    /// #    async fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
-    /// let sys = ActorSystem::new().unwrap();
+    /// let sys = ActorSystem::new().await.unwrap();
     ///
     /// let props = Props::new_from_args(User::actor, "Naomi Nagata".into());
     ///
-    /// let actor = sys.actor_of_props("user", props).unwrap();
+    /// let actor = sys.actor_of_props("user", props).await.unwrap();
     /// # })
     /// ```
     /// An actor requiring multiple parameters.
@@ -106,19 +108,20 @@ impl Props {
     ///     }
     /// }
     ///
+    /// # #[async_trait::async_trait]
     /// # impl Actor for BankAccount {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
+    /// #    async fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
-    /// let sys = ActorSystem::new().unwrap();
+    /// let sys = ActorSystem::new().await.unwrap();
     ///
     /// let props = Props::new_from_args(BankAccount::actor,
     ///                             ("James Holden".into(), "12345678".into()));
     ///
     /// // start the actor and get an `ActorRef`
-    /// let actor = sys.actor_of_props("bank_account", props).unwrap();
+    /// let actor = sys.actor_of_props("bank_account", props).await.unwrap();
     /// # })
     /// ```
     #[inline]
@@ -144,18 +147,19 @@ impl Props {
     /// #[derive(Default)]
     /// struct User;
     ///
+    /// # #[async_trait::async_trait]
     /// # impl Actor for User {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
+    /// #    async fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
-    /// let sys = ActorSystem::new().unwrap();
+    /// let sys = ActorSystem::new().await.unwrap();
     ///
     /// let props = Props::new::<User>();
     ///
     /// // start the actor and get an `ActorRef`
-    /// let actor = sys.actor_of_props("user", props).unwrap();
+    /// let actor = sys.actor_of_props("user", props).await.unwrap();
     /// # })
     /// ```
     /// Creates an `ActorProducer` from a type which implements ActorFactory with no factory method parameters.
@@ -173,18 +177,19 @@ impl Props {
     ///     }
     /// }
     ///
+    /// # #[async_trait::async_trait]
     /// # impl Actor for User {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
+    /// #    async fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
-    /// let sys = ActorSystem::new().unwrap();
+    /// let sys = ActorSystem::new().await.unwrap();
     ///
     /// let props = Props::new::<User>();
     ///
     /// // start the actor and get an `ActorRef`
-    /// let actor = sys.actor_of_props("user", props).unwrap();
+    /// let actor = sys.actor_of_props("user", props).await.unwrap();
     /// # })
     /// ```
     #[inline]
@@ -214,17 +219,18 @@ impl Props {
     ///     }
     /// }
     ///
+    /// # #[async_trait::async_trait]
     /// # impl Actor for User {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
+    /// #    async fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
-    /// let sys = ActorSystem::new().unwrap();
+    /// let sys = ActorSystem::new().await.unwrap();
     ///
     /// let props = Props::new_args::<User, _>("Naomi Nagata".into());
     ///
-    /// let actor = sys.actor_of_props("user", props).unwrap();
+    /// let actor = sys.actor_of_props("user", props).await.unwrap();
     /// # })
     /// ```
     /// An actor requiring multiple parameters.
@@ -245,19 +251,20 @@ impl Props {
     ///     }
     /// }
     ///
+    /// # #[async_trait::async_trait]
     /// # impl Actor for BankAccount {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
+    /// #    async fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
-    /// let sys = ActorSystem::new().unwrap();
+    /// let sys = ActorSystem::new().await.unwrap();
     ///
     /// let props = Props::new_from_args(BankAccount::create_args,
     ///                             ("James Holden".into(), "12345678".into()));
     ///
     /// // start the actor and get an `ActorRef`
-    /// let actor = sys.actor_of_props("bank_account", props).unwrap();
+    /// let actor = sys.actor_of_props("bank_account", props).await.unwrap();
     /// })
     /// ```
     #[inline]
