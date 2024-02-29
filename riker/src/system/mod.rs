@@ -7,10 +7,7 @@ use tracing::debug;
 
 use std::fmt;
 
-use crate::{
-    actor::BasicActorRef,
-    actors::selection::RefSelectionFactory,
-};
+use crate::{actor::BasicActorRef, actors::selection::RefSelectionFactory};
 
 use self::actor_ref::BoxedTell;
 // Public riker::system API (plus the pub data types in this file)
@@ -140,9 +137,10 @@ impl fmt::Debug for SystemError {
     }
 }
 use std::{
-    sync::{Arc, Mutex},
+    sync::Arc,
     time::{Duration, Instant},
 };
+use tokio::sync::Mutex;
 
 use chrono::prelude::*;
 use config::Config;
@@ -185,12 +183,12 @@ impl SystemBuilder {
         SystemBuilder::default()
     }
 
-    pub fn create(self) -> Result<ActorSystem, SystemError> {
+    pub async fn create(self) -> Result<ActorSystem, SystemError> {
         let name = self.name.unwrap_or_else(|| "riker".to_string());
         let cfg = self.cfg.unwrap_or_else(load_config);
         let exec = self.exec.unwrap_or_else(|| default_exec(&cfg));
 
-        ActorSystem::create(name.as_ref(), exec, cfg)
+        ActorSystem::create(name.as_ref(), exec, cfg).await
     }
 
     pub fn name(self, name: &str) -> Self {
@@ -236,40 +234,40 @@ impl ActorSystem {
     /// Create a new `ActorSystem` instance
     ///
     /// Requires a type that implements the `Model` trait.
-    pub fn new() -> Result<ActorSystem, SystemError> {
+    pub async fn new() -> Result<ActorSystem, SystemError> {
         let cfg = load_config();
         let exec = default_exec(&cfg);
 
-        ActorSystem::create("riker", exec, cfg)
+        ActorSystem::create("riker", exec, cfg).await
     }
 
     /// Create a new `ActorSystem` instance with provided executor
     ///
     /// Requires a type that implements the `TaskExecutor` trait.
-    pub fn with_executor(exec: Handle) -> Result<ActorSystem, SystemError> {
+    pub async fn with_executor(exec: Handle) -> Result<ActorSystem, SystemError> {
         let cfg = load_config();
 
-        ActorSystem::create("riker", exec, cfg)
+        ActorSystem::create("riker", exec, cfg).await
     }
 
     /// Create a new `ActorSystem` instance with provided name
     ///
     /// Requires a type that implements the `Model` trait.
-    pub fn with_name(name: &str) -> Result<ActorSystem, SystemError> {
+    pub async fn with_name(name: &str) -> Result<ActorSystem, SystemError> {
         let cfg = load_config();
         let exec = default_exec(&cfg);
 
-        ActorSystem::create(name, exec, cfg)
+        ActorSystem::create(name, exec, cfg).await
     }
 
     /// Create a new `ActorSystem` instance bypassing default config behavior
-    pub fn with_config(name: &str, cfg: Config) -> Result<ActorSystem, SystemError> {
+    pub async fn with_config(name: &str, cfg: Config) -> Result<ActorSystem, SystemError> {
         let exec = default_exec(&cfg);
 
-        ActorSystem::create(name, exec, cfg)
+        ActorSystem::create(name, exec, cfg).await
     }
 
-    fn create(name: &str, exec: Handle, cfg: Config) -> Result<ActorSystem, SystemError> {
+    async fn create(name: &str, exec: Handle, cfg: Config) -> Result<ActorSystem, SystemError> {
         validate_name(name).map_err(|_| SystemError::InvalidName(name.into()))?;
         // Until the logger has started, use println
         debug!("Starting actor system: System[{}]", name);
@@ -299,11 +297,11 @@ impl ActorSystem {
         };
 
         // 3. create initial actor hierarchy
-        let sys_actors = create_root(&sys);
+        let sys_actors = create_root(&sys).await;
         sys.sys_actors = Some(sys_actors);
 
         // 4. start system channels
-        sys.sys_channels = Some(sys_channels(&prov, &sys)?);
+        sys.sys_channels = Some(sys_channels(&prov, &sys).await?);
 
         // 5. start dead letter logger
         let _dl_logger = sys_actor_of_args::<DeadLetterLogger, _>(
@@ -311,7 +309,8 @@ impl ActorSystem {
             &sys,
             "dl_logger",
             sys.dead_letters().clone(),
-        )?;
+        )
+        .await?;
 
         sys.complete_start();
 
@@ -361,13 +360,13 @@ impl ActorSystem {
             if node.is_root() {
                 println!("{}", sys.name());
 
-                for actor in node.children() {
+                for actor in node.children().iter() {
                     print_node(sys, &actor, "");
                 }
             } else {
                 println!("{}└─ {}", indent, node.name());
 
-                for actor in node.children() {
+                for actor in node.children().iter() {
                     print_node(sys, &actor, &(indent.to_string() + "   "));
                 }
             }
@@ -382,7 +381,7 @@ impl ActorSystem {
         fn node_to_json(sys: &ActorSystem, node: &BasicActorRef) -> Value {
             if node.is_root() {
                 let mut children_json = Vec::new();
-                for actor in node.children() {
+                for actor in node.children().iter() {
                     let child_json = node_to_json(sys, &actor);
                     children_json.push(child_json);
                 }
@@ -391,7 +390,7 @@ impl ActorSystem {
                 })
             } else {
                 let mut children_json = Vec::new();
-                for actor in node.children() {
+                for actor in node.children().iter() {
                     let child_json = node_to_json(sys, &actor);
                     children_json.push(child_json);
                 }
@@ -415,7 +414,7 @@ impl ActorSystem {
         ) {
             nodes.push(json!({ "id": node.name() }));
 
-            for actor in node.children() {
+            for actor in node.children().iter() {
                 edges.push(json!({ "from": node.name(), "to": actor.name() }));
                 node_to_json(sys, &actor, nodes, edges);
             }
@@ -464,9 +463,11 @@ impl ActorSystem {
         &self.sys_channels.as_ref().unwrap().dead_letters
     }
 
-    pub fn publish_event(&self, evt: SystemEvent) {
+    pub async fn publish_event(&self, evt: SystemEvent) {
         let topic = Topic::from(&evt);
-        self.sys_events().tell(Publish { topic, msg: evt }, None);
+        self.sys_events()
+            .tell(Publish { topic, msg: evt }, None)
+            .await;
     }
 
     /// Returns the `Config` used by the system
@@ -479,7 +480,7 @@ impl ActorSystem {
     }
 
     /// Create an actor under the system root
-    pub fn sys_actor_of_props<A>(
+    pub async fn sys_actor_of_props<A>(
         &self,
         name: &str,
         props: BoxActorProd<A>,
@@ -489,17 +490,22 @@ impl ActorSystem {
     {
         self.provider
             .create_actor(props, name, &self.sys_root(), self)
+            .await
     }
 
-    pub fn sys_actor_of<A>(&self, name: &str) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
+    pub async fn sys_actor_of<A>(
+        &self,
+        name: &str,
+    ) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
     where
         A: ActorFactory,
     {
         self.provider
             .create_actor(Props::new::<A>(), name, &self.sys_root(), self)
+            .await
     }
 
-    pub fn sys_actor_of_args<A, Args>(
+    pub async fn sys_actor_of_args<A, Args>(
         &self,
         name: &str,
         args: Args,
@@ -510,6 +516,7 @@ impl ActorSystem {
     {
         self.provider
             .create_actor(Props::new_args::<A, _>(args), name, &self.sys_root(), self)
+            .await
     }
 
     /// Shutdown the actor system
@@ -519,11 +526,13 @@ impl ActorSystem {
     ///
     /// Does not block. Returns a future which is completed when all
     /// actors have successfully stopped.
-    pub fn shutdown(&self) -> Shutdown {
+    pub async fn shutdown(&self) -> Shutdown {
         let (tx, rx) = oneshot::channel::<()>();
         let tx = Arc::new(Mutex::new(Some(tx)));
 
-        self.tmp_actor_of_args::<ShutdownActor, _>(tx).unwrap();
+        self.tmp_actor_of_args::<ShutdownActor, _>(tx)
+            .await
+            .unwrap();
 
         rx
     }
@@ -532,8 +541,9 @@ impl ActorSystem {
 unsafe impl Send for ActorSystem {}
 unsafe impl Sync for ActorSystem {}
 
+#[async_trait::async_trait]
 impl ActorRefFactory for ActorSystem {
-    fn actor_of_props<A>(
+    async fn actor_of_props<A>(
         &self,
         name: &str,
         props: BoxActorProd<A>,
@@ -543,17 +553,19 @@ impl ActorRefFactory for ActorSystem {
     {
         self.provider
             .create_actor(props, name, &self.user_root(), self)
+            .await
     }
 
-    fn actor_of<A>(&self, name: &str) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
+    async fn actor_of<A>(&self, name: &str) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
     where
         A: ActorFactory,
     {
         self.provider
             .create_actor(Props::new::<A>(), name, &self.user_root(), self)
+            .await
     }
 
-    fn actor_of_args<A, Args>(
+    async fn actor_of_args<A, Args>(
         &self,
         name: &str,
         args: Args,
@@ -564,15 +576,17 @@ impl ActorRefFactory for ActorSystem {
     {
         self.provider
             .create_actor(Props::new_args::<A, _>(args), name, &self.user_root(), self)
+            .await
     }
 
-    fn stop(&self, actor: impl SysTell) {
-        actor.sys_tell(SystemCmd::Stop.into());
+    async fn stop(&self, actor: impl SysTell) {
+        actor.sys_tell(SystemCmd::Stop.into()).await;
     }
 }
 
+#[async_trait::async_trait]
 impl ActorRefFactory for &ActorSystem {
-    fn actor_of_props<A>(
+    async fn actor_of_props<A>(
         &self,
         name: &str,
         props: BoxActorProd<A>,
@@ -582,17 +596,19 @@ impl ActorRefFactory for &ActorSystem {
     {
         self.provider
             .create_actor(props, name, &self.user_root(), self)
+            .await
     }
 
-    fn actor_of<A>(&self, name: &str) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
+    async fn actor_of<A>(&self, name: &str) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
     where
         A: ActorFactory,
     {
         self.provider
             .create_actor(Props::new::<A>(), name, &self.user_root(), self)
+            .await
     }
 
-    fn actor_of_args<A, Args>(
+    async fn actor_of_args<A, Args>(
         &self,
         name: &str,
         args: Args,
@@ -603,33 +619,40 @@ impl ActorRefFactory for &ActorSystem {
     {
         self.provider
             .create_actor(Props::new_args::<A, _>(args), name, &self.user_root(), self)
+            .await
     }
 
-    fn stop(&self, actor: impl SysTell) {
-        actor.sys_tell(SystemCmd::Stop.into());
+    async fn stop(&self, actor: impl SysTell) {
+        actor.sys_tell(SystemCmd::Stop.into()).await;
     }
 }
 
+#[async_trait::async_trait]
 impl TmpActorRefFactory for ActorSystem {
-    fn tmp_actor_of_props<A>(&self, props: BoxActorProd<A>) -> Result<ActorRef<A::Msg>, CreateError>
+    async fn tmp_actor_of_props<A>(
+        &self,
+        props: BoxActorProd<A>,
+    ) -> Result<ActorRef<A::Msg>, CreateError>
     where
         A: Actor,
     {
         let name = format!("{}", rand::random::<u64>());
         self.provider
             .create_actor(props, &name, &self.temp_root(), self)
+            .await
     }
 
-    fn tmp_actor_of<A>(&self) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
+    async fn tmp_actor_of<A>(&self) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
     where
         A: ActorFactory,
     {
         let name = format!("{}", rand::random::<u64>());
         self.provider
             .create_actor(Props::new::<A>(), &name, &self.temp_root(), self)
+            .await
     }
 
-    fn tmp_actor_of_args<A, Args>(
+    async fn tmp_actor_of_args<A, Args>(
         &self,
         args: Args,
     ) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
@@ -638,12 +661,14 @@ impl TmpActorRefFactory for ActorSystem {
         A: ActorFactoryArgs<Args>,
     {
         let name = format!("{}", rand::random::<u64>());
-        self.provider.create_actor(
-            Props::new_args::<A, _>(args),
-            &name,
-            &self.temp_root(),
-            self,
-        )
+        self.provider
+            .create_actor(
+                Props::new_args::<A, _>(args),
+                &name,
+                &self.temp_root(),
+                self,
+            )
+            .await
     }
 }
 
@@ -675,6 +700,7 @@ impl RefSelectionFactory for ActorSystem {
                 Some(root.clone())
             } else if root.has_children() {
                 root.children()
+                    .iter()
                     .find_map(|act| find_actor_by_path_recursive(&act, path))
             } else {
                 None
@@ -714,8 +740,9 @@ impl fmt::Debug for ActorSystem {
     }
 }
 
+#[async_trait::async_trait]
 impl Timer for ActorSystem {
-    fn schedule<T, M>(
+    async fn schedule<T, M>(
         &self,
         initial_delay: Duration,
         interval: Duration,
@@ -739,11 +766,11 @@ impl Timer for ActorSystem {
             msg: AnyMessage::new(msg, false),
         };
 
-        let _ = self.timer.send(Job::Repeat(job));
+        let _ = self.timer.send(Job::Repeat(job)).await;
         id
     }
 
-    fn schedule_once<T, M>(
+    async fn schedule_once<T, M>(
         &self,
         delay: Duration,
         receiver: ActorRef<M>,
@@ -765,11 +792,11 @@ impl Timer for ActorSystem {
             msg: AnyMessage::new(msg, true),
         };
 
-        let _ = self.timer.send(Job::Once(job));
+        let _ = self.timer.send(Job::Once(job)).await;
         id
     }
 
-    fn schedule_at_time<T, M>(
+    async fn schedule_at_time<T, M>(
         &self,
         time: DateTime<Utc>,
         receiver: ActorRef<M>,
@@ -794,18 +821,18 @@ impl Timer for ActorSystem {
             msg: AnyMessage::new(msg, true),
         };
 
-        let _ = self.timer.send(Job::Once(job));
+        let _ = self.timer.send(Job::Once(job)).await;
         id
     }
 
-    fn cancel_schedule(&self, id: Uuid) {
-        let _ = self.timer.send(Job::Cancel(id));
+    async fn cancel_schedule(&self, id: Uuid) {
+        let _ = self.timer.send(Job::Cancel(id)).await;
     }
 }
 
 // helper functions
 #[allow(unused)]
-fn sys_actor_of_props<A>(
+async fn sys_actor_of_props<A>(
     prov: &Provider,
     sys: &ActorSystem,
     name: &str,
@@ -815,10 +842,11 @@ where
     A: Actor,
 {
     prov.create_actor(props, name, &sys.sys_root(), sys)
+        .await
         .map_err(|_| SystemError::ModuleFailed(name.into()))
 }
 
-fn sys_actor_of<A>(
+async fn sys_actor_of<A>(
     prov: &Provider,
     sys: &ActorSystem,
     name: &str,
@@ -827,11 +855,11 @@ where
     A: ActorFactory,
 {
     prov.create_actor(Props::new::<A>(), name, &sys.sys_root(), sys)
+        .await
         .map_err(|_| SystemError::ModuleFailed(name.into()))
 }
 
-#[allow(dead_code)]
-fn sys_actor_of_args<A, Args>(
+async fn sys_actor_of_args<A, Args>(
     prov: &Provider,
     sys: &ActorSystem,
     name: &str,
@@ -842,12 +870,13 @@ where
     A: ActorFactoryArgs<Args>,
 {
     prov.create_actor(Props::new_args::<A, _>(args), name, &sys.sys_root(), sys)
+        .await
         .map_err(|_| SystemError::ModuleFailed(name.into()))
 }
 
-fn sys_channels(prov: &Provider, sys: &ActorSystem) -> Result<SysChannels, SystemError> {
-    let sys_events = sys_actor_of::<EventsChannel>(prov, sys, "sys_events")?;
-    let dead_letters = sys_actor_of::<Channel<DeadLetter>>(prov, sys, "dead_letters")?;
+async fn sys_channels(prov: &Provider, sys: &ActorSystem) -> Result<SysChannels, SystemError> {
+    let sys_events = sys_actor_of::<EventsChannel>(prov, sys, "sys_events").await?;
+    let dead_letters = sys_actor_of::<Channel<DeadLetter>>(prov, sys, "dead_letters").await?;
 
     // subscribe the dead_letters channel to actor terminated events
     // so that any future subscribed actors that terminate are automatically
@@ -910,15 +939,16 @@ impl ShutdownActor {
     }
 }
 
+#[async_trait::async_trait]
 impl Actor for ShutdownActor {
     type Msg = SystemEvent;
 
-    fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
+    async fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         let sub = Subscribe {
             topic: SysTopic::ActorTerminated.into(),
             actor: BoxedTell(Arc::new(ctx.myself().clone())),
         };
-        ctx.system().sys_events().tell(sub, None);
+        ctx.system().sys_events().tell(sub, None).await;
 
         // todo this is prone to failing since there is no
         // confirmation that ShutdownActor has subscribed to
@@ -928,10 +958,10 @@ impl Actor for ShutdownActor {
 
         // tokio::time::sleep_ms(1000);
         // send stop to all /user children
-        ctx.system().stop(ctx.system().user_root());
+        ctx.system().stop(ctx.system().user_root()).await;
     }
 
-    fn sys_recv(
+    async fn sys_recv(
         &mut self,
         ctx: &Context<Self::Msg>,
         msg: SystemMsg,
@@ -939,26 +969,26 @@ impl Actor for ShutdownActor {
     ) {
         if let SystemMsg::Event(evt) = msg {
             if let SystemEvent::ActorTerminated(terminated) = evt {
-                self.receive(ctx, terminated, sender);
+                self.receive(ctx, terminated, sender).await;
             }
         }
     }
 
-    fn recv(&mut self, _: &Context<Self::Msg>, _: Self::Msg, _: Option<BasicActorRef>) {}
+    async fn recv(&mut self, _: &Context<Self::Msg>, _: Self::Msg, _: Option<BasicActorRef>) {}
 }
 
+#[async_trait::async_trait]
 impl Receive<ActorTerminated> for ShutdownActor {
-    fn receive(
+    async fn receive(
         &mut self,
         ctx: &Context<Self::Msg>,
         msg: ActorTerminated,
         _sender: Option<BasicActorRef>,
     ) {
         if &msg.actor == ctx.system().user_root() {
-            if let Ok(ref mut tx) = self.tx.lock() {
-                if let Some(tx) = tx.take() {
-                    tx.send(()).unwrap();
-                }
+            let mut tx = self.tx.lock().await;
+            if let Some(tx) = tx.take() {
+                tx.send(()).unwrap();
             }
         }
     }

@@ -1,4 +1,8 @@
-use std::{fmt::{self, Debug}, ops::Deref, sync::Arc};
+use std::{
+    fmt::{self, Debug},
+    ops::Deref,
+    sync::Arc,
+};
 
 use crate::{
     actor::{
@@ -10,6 +14,8 @@ use crate::{
     system::{ActorSystem, SystemMsg},
     AnyMessage, Envelope, Message,
 };
+
+use super::actor_cell::Children;
 
 /// A lightweight, typed reference to interact with its underlying
 /// actor instance through concurrent messaging.
@@ -39,24 +45,21 @@ impl<Msg: Message> ActorRef<Msg> {
     pub fn new(cell: ExtendedCell<Msg>) -> ActorRef<Msg> {
         ActorRef { cell }
     }
-
-    pub fn send_msg(&self, msg: Msg, send_out: impl Into<Option<BasicActorRef>>) {
-        let envelope = Envelope {
-            msg,
-            send_out: send_out.into(),
-        };
-        // consume the result (we don't return it to user)
-        let _ = self.cell.send_msg(envelope);
-    }
 }
 
+#[async_trait::async_trait]
 impl<T, M> Tell<T> for ActorRef<M>
 where
     T: Message + Into<M>,
     M: Message,
 {
-    fn tell(&self, msg: T, send_out: Option<BasicActorRef>) {
-        self.send_msg(msg.into(), send_out);
+    async fn tell(&self, msg: T, send_out: Option<BasicActorRef>) {
+        let envelope = Envelope {
+            msg: msg.into(),
+            send_out: send_out.into(),
+        };
+        // consume the result (we don't return it to user)
+        let _ = self.cell.send_msg(envelope).await;
     }
 
     fn box_clone(&self) -> BoxedTell<T> {
@@ -64,10 +67,14 @@ where
     }
 }
 
+#[async_trait::async_trait]
 impl<M: Message> SysTell for ActorRef<M> {
-    fn sys_tell(&self, msg: SystemMsg) {
-        let envelope = Envelope { send_out: None, msg };
-        let _ = self.cell.send_sys_msg(envelope);
+    async fn sys_tell(&self, msg: SystemMsg) {
+        let envelope = Envelope {
+            send_out: None,
+            msg,
+        };
+        let _ = self.cell.send_sys_msg(envelope).await;
     }
 }
 
@@ -83,6 +90,10 @@ impl<Msg: Message> ActorReference for ActorRef<Msg> {
         self.cell.uri()
     }
 
+    fn system(&self) -> &ActorSystem {
+        self.cell.system()
+    }
+
     /// Actor path.
     ///
     /// e.g. `/user/actor_a/actor_b`
@@ -112,14 +123,9 @@ impl<Msg: Message> ActorReference for ActorRef<Msg> {
     }
 
     /// Iterator over children references.
-    fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
+    fn children(&self) -> &Children {
         self.cell.children()
     }
-
-    // fn sys_tell(&self, msg: SystemMsg) {
-    //     let envelope = Envelope { msg, sender: None };
-    //     let _ = self.cell.send_sys_msg(envelope);
-    // }
 }
 
 impl<Msg: Message> ActorReference for &ActorRef<Msg> {
@@ -134,6 +140,10 @@ impl<Msg: Message> ActorReference for &ActorRef<Msg> {
         self.cell.uri()
     }
 
+    fn system(&self) -> &ActorSystem {
+        self.cell.system()
+    }
+
     /// Actor path.
     ///
     /// e.g. `/user/actor_a/actor_b`
@@ -163,15 +173,19 @@ impl<Msg: Message> ActorReference for &ActorRef<Msg> {
     }
 
     /// Iterator over children references.
-    fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
+    fn children<'a>(&'a self) -> &Children {
         self.cell.children()
     }
 }
 
+#[async_trait::async_trait]
 impl<M: Message> SysTell for &ActorRef<M> {
-    fn sys_tell(&self, msg: SystemMsg) {
-        let envelope = Envelope { msg, send_out: None };
-        let _ = self.cell.send_sys_msg(envelope);
+    async fn sys_tell(&self, msg: SystemMsg) {
+        let envelope = Envelope {
+            msg,
+            send_out: None,
+        };
+        let _ = self.cell.send_sys_msg(envelope).await;
     }
 }
 
@@ -210,6 +224,10 @@ where
         self.0.uri()
     }
 
+    fn system(&self) -> &ActorSystem {
+        self.0.system()
+    }
+
     /// Actor path.
     ///
     /// e.g. `/user/actor_a/actor_b
@@ -239,14 +257,15 @@ where
     }
 
     /// Iterator over children references.
-    fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
+    fn children<'a>(&'a self) -> &Children {
         self.0.children()
     }
 }
 
+#[async_trait::async_trait]
 impl<T: Debug + Clone + Send + 'static> SysTell for BoxedTell<T> {
-    fn sys_tell(&self, msg: SystemMsg) {
-        self.0.sys_tell(msg)
+    async fn sys_tell(&self, msg: SystemMsg) {
+        self.0.sys_tell(msg).await
     }
 }
 
@@ -318,7 +337,7 @@ impl BasicActorRef {
     /// Send a message to this actor
     ///
     /// Returns a result. If the message type is not supported Error is returned.
-    pub fn try_tell<Msg>(
+    pub async fn try_tell<Msg>(
         &self,
         msg: Msg,
         sender: impl Into<Option<BasicActorRef>>,
@@ -327,14 +346,15 @@ impl BasicActorRef {
         Msg: Message + Send,
     {
         self.try_tell_any(&mut AnyMessage::new(msg, true), sender)
+            .await
     }
 
-    pub fn try_tell_any(
+    pub async fn try_tell_any(
         &self,
         msg: &mut AnyMessage,
         sender: impl Into<Option<BasicActorRef>>,
     ) -> Result<(), AnyEnqueueError> {
-        self.cell.send_any_msg(msg, sender.into())
+        self.cell.send_any_msg(msg, sender.into()).await
     }
 }
 
@@ -350,6 +370,10 @@ impl ActorReference for BasicActorRef {
         self.cell.uri()
     }
 
+    fn system(&self) -> &ActorSystem {
+        self.cell.system()
+    }
+
     /// Actor path.
     ///
     /// e.g. `/user/actor_a/actor_b`
@@ -379,15 +403,19 @@ impl ActorReference for BasicActorRef {
     }
 
     /// Iterator over children references.
-    fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
+    fn children<'a>(&'a self) -> &Children {
         self.cell.children()
     }
 }
 
+#[async_trait::async_trait]
 impl SysTell for BasicActorRef {
-    fn sys_tell(&self, msg: SystemMsg) {
-        let envelope = Envelope { msg, send_out: None };
-        let _ = self.cell.send_sys_msg(envelope);
+    async fn sys_tell(&self, msg: SystemMsg) {
+        let envelope = Envelope {
+            msg,
+            send_out: None,
+        };
+        let _ = self.cell.send_sys_msg(envelope).await;
     }
 }
 
@@ -403,6 +431,10 @@ impl ActorReference for &BasicActorRef {
         self.cell.uri()
     }
 
+    fn system(&self) -> &ActorSystem {
+        self.cell.system()
+    }
+
     /// Actor path.
     ///
     /// e.g. `/user/actor_a/actor_b`
@@ -432,15 +464,19 @@ impl ActorReference for &BasicActorRef {
     }
 
     /// Iterator over children references.
-    fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a> {
+    fn children<'a>(&'a self) -> &Children {
         self.cell.children()
     }
 }
 
+#[async_trait::async_trait]
 impl SysTell for &BasicActorRef {
-    fn sys_tell(&self, msg: SystemMsg) {
-        let envelope = Envelope { msg, send_out: None };
-        let _ = self.cell.send_sys_msg(envelope);
+    async fn sys_tell(&self, msg: SystemMsg) {
+        let envelope = Envelope {
+            msg,
+            send_out: None,
+        };
+        let _ = self.cell.send_sys_msg(envelope).await;
     }
 }
 

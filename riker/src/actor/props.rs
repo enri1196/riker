@@ -1,8 +1,9 @@
 use std::{
     fmt,
     panic::{RefUnwindSafe, UnwindSafe},
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
+use tokio::sync::Mutex;
 
 use crate::actor::Actor;
 
@@ -32,18 +33,19 @@ impl Props {
     ///     }
     /// }
     ///
+    /// # #[async_trait::async_trait]
     /// # impl Actor for User {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
+    /// #    async fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
-    /// let sys = ActorSystem::new().unwrap();
+    /// let sys = ActorSystem::new().await.unwrap();
     ///
     /// let props = Props::new_from(User::actor);
     ///
     /// // start the actor and get an `ActorRef`
-    /// let actor = sys.actor_of_props("user", props).unwrap();
+    /// let actor = sys.actor_of_props("user", props).await.unwrap();
     /// })
     /// ```
     #[inline]
@@ -74,17 +76,18 @@ impl Props {
     ///     }
     /// }
     ///
+    /// # #[async_trait::async_trait]
     /// # impl Actor for User {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
+    /// #    async fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
-    /// let sys = ActorSystem::new().unwrap();
+    /// let sys = ActorSystem::new().await.unwrap();
     ///
     /// let props = Props::new_from_args(User::actor, "Naomi Nagata".into());
     ///
-    /// let actor = sys.actor_of_props("user", props).unwrap();
+    /// let actor = sys.actor_of_props("user", props).await.unwrap();
     /// # })
     /// ```
     /// An actor requiring multiple parameters.
@@ -105,19 +108,20 @@ impl Props {
     ///     }
     /// }
     ///
+    /// # #[async_trait::async_trait]
     /// # impl Actor for BankAccount {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
+    /// #    async fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
-    /// let sys = ActorSystem::new().unwrap();
+    /// let sys = ActorSystem::new().await.unwrap();
     ///
     /// let props = Props::new_from_args(BankAccount::actor,
     ///                             ("James Holden".into(), "12345678".into()));
     ///
     /// // start the actor and get an `ActorRef`
-    /// let actor = sys.actor_of_props("bank_account", props).unwrap();
+    /// let actor = sys.actor_of_props("bank_account", props).await.unwrap();
     /// # })
     /// ```
     #[inline]
@@ -143,18 +147,19 @@ impl Props {
     /// #[derive(Default)]
     /// struct User;
     ///
+    /// # #[async_trait::async_trait]
     /// # impl Actor for User {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
+    /// #    async fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
-    /// let sys = ActorSystem::new().unwrap();
+    /// let sys = ActorSystem::new().await.unwrap();
     ///
     /// let props = Props::new::<User>();
     ///
     /// // start the actor and get an `ActorRef`
-    /// let actor = sys.actor_of_props("user", props).unwrap();
+    /// let actor = sys.actor_of_props("user", props).await.unwrap();
     /// # })
     /// ```
     /// Creates an `ActorProducer` from a type which implements ActorFactory with no factory method parameters.
@@ -172,18 +177,19 @@ impl Props {
     ///     }
     /// }
     ///
+    /// # #[async_trait::async_trait]
     /// # impl Actor for User {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
+    /// #    async fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
-    /// let sys = ActorSystem::new().unwrap();
+    /// let sys = ActorSystem::new().await.unwrap();
     ///
     /// let props = Props::new::<User>();
     ///
     /// // start the actor and get an `ActorRef`
-    /// let actor = sys.actor_of_props("user", props).unwrap();
+    /// let actor = sys.actor_of_props("user", props).await.unwrap();
     /// # })
     /// ```
     #[inline]
@@ -213,17 +219,18 @@ impl Props {
     ///     }
     /// }
     ///
+    /// # #[async_trait::async_trait]
     /// # impl Actor for User {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
+    /// #    async fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
-    /// let sys = ActorSystem::new().unwrap();
+    /// let sys = ActorSystem::new().await.unwrap();
     ///
     /// let props = Props::new_args::<User, _>("Naomi Nagata".into());
     ///
-    /// let actor = sys.actor_of_props("user", props).unwrap();
+    /// let actor = sys.actor_of_props("user", props).await.unwrap();
     /// # })
     /// ```
     /// An actor requiring multiple parameters.
@@ -244,19 +251,20 @@ impl Props {
     ///     }
     /// }
     ///
+    /// # #[async_trait::async_trait]
     /// # impl Actor for BankAccount {
     /// #    type Msg = String;
-    /// #    fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
+    /// #    async fn recv(&mut self, _ctx: &Context<String>, _msg: String, _send_out: Option<BasicActorRef>) {}
     /// # }
     /// // main
     /// # tokio_test::block_on(async {
-    /// let sys = ActorSystem::new().unwrap();
+    /// let sys = ActorSystem::new().await.unwrap();
     ///
     /// let props = Props::new_from_args(BankAccount::create_args,
     ///                             ("James Holden".into(), "12345678".into()));
     ///
     /// // start the actor and get an `ActorRef`
-    /// let actor = sys.actor_of_props("bank_account", props).unwrap();
+    /// let actor = sys.actor_of_props("bank_account", props).await.unwrap();
     /// })
     /// ```
     #[inline]
@@ -296,7 +304,8 @@ impl<A: Default + Actor> ActorFactory for A {
 ///
 /// `ActorProducer` can hold values required by the actor's factory method
 /// parameters.
-pub trait ActorProducer: fmt::Debug + Send + UnwindSafe + RefUnwindSafe {
+#[async_trait::async_trait]
+pub trait ActorProducer: fmt::Debug + Send {
     type Actor: Actor;
 
     /// Produces an instance of an `Actor`.
@@ -310,44 +319,47 @@ pub trait ActorProducer: fmt::Debug + Send + UnwindSafe + RefUnwindSafe {
     /// # Panics
     /// If the provided factory method panics the panic will be caught
     /// by the system, resulting in an error result returning to `actor_of_props`.
-    fn produce(&self) -> Self::Actor;
+    async fn produce(&self) -> Self::Actor;
 }
 
+#[async_trait::async_trait]
 impl<A> ActorProducer for Arc<Mutex<Box<dyn ActorProducer<Actor = A>>>>
 where
     A: Actor + Send + 'static,
 {
     type Actor = A;
 
-    fn produce(&self) -> A {
-        self.lock().unwrap().produce()
+    async fn produce(&self) -> A {
+        self.lock().await.produce().await
     }
 }
 
+#[async_trait::async_trait]
 impl<A> ActorProducer for Arc<Mutex<dyn ActorProducer<Actor = A>>>
 where
     A: Actor + Send + 'static,
 {
     type Actor = A;
 
-    fn produce(&self) -> A {
-        self.lock().unwrap().produce()
+    async fn produce(&self) -> A {
+        self.lock().await.produce().await
     }
 }
 
-impl<A> ActorProducer for Box<dyn ActorProducer<Actor = A>>
+#[async_trait::async_trait]
+impl<A> ActorProducer for Box<dyn ActorProducer<Actor = A> + Send + Sync + 'static>
 where
     A: Actor + Send + 'static,
 {
     type Actor = A;
 
-    fn produce(&self) -> A {
-        (**self).produce()
+    async fn produce(&self) -> A {
+        (**self).produce().await
     }
 }
 
 pub struct ActorProps<A: Actor> {
-    creator: Box<dyn Fn() -> A + Send>,
+    creator: Arc<Mutex<dyn Fn() -> A + Send>>,
 }
 
 impl<A: Actor> UnwindSafe for ActorProps<A> {}
@@ -362,19 +374,20 @@ where
         F: Fn() -> A + Send + 'static,
     {
         ActorProps {
-            creator: Box::new(creator),
+            creator: Arc::new(Mutex::new(creator)),
         }
     }
 }
 
+#[async_trait::async_trait]
 impl<A> ActorProducer for ActorProps<A>
 where
     A: Actor + Send + 'static,
 {
     type Actor = A;
 
-    fn produce(&self) -> A {
-        let f = &self.creator;
+    async fn produce(&self) -> A {
+        let f = self.creator.lock().await;
         f()
     }
 }
@@ -392,7 +405,7 @@ impl<A: Actor> fmt::Debug for ActorProps<A> {
 }
 
 pub struct ActorPropsWithArgs<A: Actor, Args: ActorArgs> {
-    creator: Box<dyn Fn(Args) -> A + Send>,
+    creator: Arc<Mutex<dyn Fn(Args) -> A + Send>>,
     args: Args,
 }
 
@@ -409,12 +422,13 @@ where
         F: Fn(Args) -> A + Send + 'static,
     {
         ActorPropsWithArgs {
-            creator: Box::new(creator),
+            creator: Arc::new(Mutex::new(creator)),
             args,
         }
     }
 }
 
+#[async_trait::async_trait]
 impl<A, Args> ActorProducer for ActorPropsWithArgs<A, Args>
 where
     A: Actor + Send + 'static,
@@ -422,8 +436,8 @@ where
 {
     type Actor = A;
 
-    fn produce(&self) -> A {
-        let f = &self.creator;
+    async fn produce(&self) -> A {
+        let f = &self.creator.lock().await;
         let args = self.args.clone();
         f(args)
     }

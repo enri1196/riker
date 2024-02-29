@@ -32,54 +32,75 @@ impl ActorFactoryArgs<(ChannelRef<SomeMessage>, Topic)> for Subscriber {
     }
 }
 
+#[async_trait::async_trait]
 impl Actor for Subscriber {
     type Msg = SubscriberMsg;
 
-    fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
+    async fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         let sub = BoxedTell(Arc::new(ctx.myself().clone()));
-        self.chan.tell(
-            Subscribe {
-                actor: sub,
-                topic: self.topic.clone(),
-            },
-            None,
-        );
+        self.chan
+            .tell(
+                Subscribe {
+                    actor: sub,
+                    topic: self.topic.clone(),
+                },
+                None,
+            )
+            .await;
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out);
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await;
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<TestProbe> for Subscriber {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, msg: TestProbe, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        msg: TestProbe,
+        _send_out: Option<BasicActorRef>,
+    ) {
         msg.0.event(());
         self.probe = Some(msg);
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<SomeMessage> for Subscriber {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: SomeMessage, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        _msg: SomeMessage,
+        _send_out: Option<BasicActorRef>,
+    ) {
         self.probe.as_ref().unwrap().0.event(());
     }
 }
 
 #[tokio::test]
 async fn channel_publish() {
-    let sys = ActorSystem::new().unwrap();
+    let sys = ActorSystem::new().await.unwrap();
 
     // Create the channel we'll be using
-    let chan: ChannelRef<SomeMessage> = channel("my-chan", &sys).unwrap();
+    let chan: ChannelRef<SomeMessage> = channel("my-chan", &sys).await.unwrap();
 
     // The topic we'll be publishing to. Endow our subscriber test actor with this.
     // On Subscriber's pre_start it will subscribe to this channel+topic
     let topic = Topic::from("my-topic");
     let sub = sys
         .actor_of_args::<Subscriber, _>("sub-actor", (chan.clone(), topic.clone()))
+        .await
         .unwrap();
 
     let (probe, mut listen) = probe();
-    sub.tell(TestProbe(probe), None);
+    sub.tell(TestProbe(probe), None).await;
 
     // wait for the probe to arrive at the actor before publishing message
     listen.recv().await;
@@ -91,27 +112,29 @@ async fn channel_publish() {
             topic,
         },
         None,
-    );
+    )
+    .await;
 
     p_assert_eq!(listen, ());
 }
 
 #[tokio::test]
 async fn channel_publish_subscribe_all() {
-    let sys = ActorSystem::new().unwrap();
+    let sys = ActorSystem::new().await.unwrap();
 
     // Create the channel we'll be using
-    let chan: ChannelRef<SomeMessage> = channel("my-chan", &sys).unwrap();
+    let chan: ChannelRef<SomeMessage> = channel("my-chan", &sys).await.unwrap();
 
     // The '*' All topic. Endow our subscriber test actor with this.
     // On Subscriber's pre_start it will subscribe to all topics on this channel.
     let topic = Topic::from("*");
     let sub = sys
         .actor_of_args::<Subscriber, _>("sub-actor", (chan.clone(), topic))
+        .await
         .unwrap();
 
     let (probe, mut listen) = probe();
-    sub.tell(TestProbe(probe), None);
+    sub.tell(TestProbe(probe), None).await;
 
     // wait for the probe to arrive at the actor before publishing message
     listen.recv().await;
@@ -123,7 +146,8 @@ async fn channel_publish_subscribe_all() {
             topic: "topic-1".into(),
         },
         None,
-    );
+    )
+    .await;
 
     // Publish a test message to topic "topic-2"
     chan.tell(
@@ -132,7 +156,8 @@ async fn channel_publish_subscribe_all() {
             topic: "topic-2".into(),
         },
         None,
-    );
+    )
+    .await;
 
     // Publish a test message to topic "topic-3"
     chan.tell(
@@ -141,7 +166,8 @@ async fn channel_publish_subscribe_all() {
             topic: "topic-3".into(),
         },
         None,
-    );
+    )
+    .await;
 
     // Expecting three probe events
     p_assert_eq!(listen, ());
@@ -156,22 +182,40 @@ pub struct Panic;
 #[derive(Default)]
 struct DumbActor;
 
+#[async_trait::async_trait]
 impl Actor for DumbActor {
     type Msg = DumbActorMsg;
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out);
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await;
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<Panic> for DumbActor {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Panic, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        _msg: Panic,
+        _send_out: Option<BasicActorRef>,
+    ) {
         panic!("// TEST PANIC // TEST PANIC // TEST PANIC //");
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<SomeMessage> for DumbActor {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: SomeMessage, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        _msg: SomeMessage,
+        _send_out: Option<BasicActorRef>,
+    ) {
 
         // Intentionally left blank
     }
@@ -189,41 +233,67 @@ struct EventSubscriber {
     probe: Option<TestProbe>,
 }
 
+#[async_trait::async_trait]
 impl Actor for EventSubscriber {
     type Msg = EventSubscriberMsg;
 
-    fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
+    async fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         // subscribe
         let sub = BoxedTell(Arc::new(ctx.myself().clone()));
-        ctx.system().sys_events().tell(
-            Subscribe {
-                actor: sub,
-                topic: "*".into(),
-            },
-            None,
-        );
+        ctx.system()
+            .sys_events()
+            .tell(
+                Subscribe {
+                    actor: sub,
+                    topic: "*".into(),
+                },
+                None,
+            )
+            .await;
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out);
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await;
     }
 
-    fn sys_recv(&mut self, ctx: &Context<Self::Msg>, msg: SystemMsg, send_out: Option<BasicActorRef>) {
+    async fn sys_recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: SystemMsg,
+        send_out: Option<BasicActorRef>,
+    ) {
         if let SystemMsg::Event(evt) = msg {
-            self.receive(ctx, evt, send_out);
+            self.receive(ctx, evt, send_out).await;
         }
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<TestProbe> for EventSubscriber {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, msg: TestProbe, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        msg: TestProbe,
+        _send_out: Option<BasicActorRef>,
+    ) {
         msg.0.event(());
         self.probe = Some(msg);
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<SystemEvent> for EventSubscriber {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, msg: SystemEvent, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        msg: SystemEvent,
+        _send_out: Option<BasicActorRef>,
+    ) {
         match msg {
             SystemEvent::ActorCreated(created) => {
                 if created.actor.path() == "/user/dumb-actor" {
@@ -246,29 +316,29 @@ impl Receive<SystemEvent> for EventSubscriber {
 
 #[tokio::test]
 async fn channel_system_events() {
-    let sys = ActorSystem::new().unwrap();
+    let sys = ActorSystem::new().await.unwrap();
 
-    let actor = sys.actor_of::<EventSubscriber>("event-sub").unwrap();
+    let actor = sys.actor_of::<EventSubscriber>("event-sub").await.unwrap();
 
     let (probe, mut listen) = probe();
-    actor.tell(TestProbe(probe), None);
+    actor.tell(TestProbe(probe), None).await;
 
     // wait for the probe to arrive at the actor before attempting
     // create, restart and stop
     listen.recv().await;
 
     // Create an actor
-    let dumb = sys.actor_of::<DumbActor>("dumb-actor").unwrap();
+    let dumb = sys.actor_of::<DumbActor>("dumb-actor").await.unwrap();
     // ActorCreated event was received
     p_assert_eq!(listen, ());
 
     // Force restart of actor
-    dumb.tell(Panic, None);
+    dumb.tell(Panic, None).await;
     // ActorRestarted event was received
     p_assert_eq!(listen, ());
 
     // Terminate actor
-    sys.stop(&dumb);
+    sys.stop(&dumb).await;
     // ActorTerminated event was receive
     p_assert_eq!(listen, ());
 }
@@ -280,56 +350,80 @@ struct DeadLetterSub {
     probe: Option<TestProbe>,
 }
 
+#[async_trait::async_trait]
 impl Actor for DeadLetterSub {
     type Msg = DeadLetterSubMsg;
 
-    fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
+    async fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         // subscribe to dead_letters
         let sub = BoxedTell(Arc::new(ctx.myself().clone()));
-        ctx.system().dead_letters().tell(
-            Subscribe {
-                actor: sub,
-                topic: "*".into(),
-            },
-            None,
-        );
+        ctx.system()
+            .dead_letters()
+            .tell(
+                Subscribe {
+                    actor: sub,
+                    topic: "*".into(),
+                },
+                None,
+            )
+            .await;
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out)
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<TestProbe> for DeadLetterSub {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, msg: TestProbe, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        msg: TestProbe,
+        _send_out: Option<BasicActorRef>,
+    ) {
         msg.0.event(());
         self.probe = Some(msg);
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<DeadLetter> for DeadLetterSub {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: DeadLetter, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        _msg: DeadLetter,
+        _send_out: Option<BasicActorRef>,
+    ) {
         self.probe.as_ref().unwrap().0.event(());
     }
 }
 
 #[tokio::test]
 async fn channel_dead_letters() {
-    let sys = ActorSystem::new().unwrap();
-    let actor = sys.actor_of::<DeadLetterSub>("dl-subscriber").unwrap();
+    let sys = ActorSystem::new().await.unwrap();
+    let actor = sys
+        .actor_of::<DeadLetterSub>("dl-subscriber")
+        .await
+        .unwrap();
 
     let (probe, mut listen) = probe();
-    actor.tell(TestProbe(probe), None);
+    actor.tell(TestProbe(probe), None).await;
 
     // wait for the probe to arrive at the actor before attempting to stop the actor
     listen.recv().await;
 
-    let dumb = sys.actor_of::<DumbActor>("dumb-actor").unwrap();
+    let dumb = sys.actor_of::<DumbActor>("dumb-actor").await.unwrap();
 
     // immediately stop the actor and attempt to send a message
-    sys.stop(&dumb);
+    sys.stop(&dumb).await;
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-    dumb.tell(SomeMessage, None);
+    dumb.tell(SomeMessage, None).await;
 
     p_assert_eq!(listen, ());
 }

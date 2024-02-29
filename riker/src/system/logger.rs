@@ -20,21 +20,24 @@ impl ActorFactoryArgs<ActorRef<ChannelMsg<DeadLetter>>> for DeadLetterLogger {
     }
 }
 
+#[async_trait::async_trait]
 impl Actor for DeadLetterLogger {
     type Msg = DeadLetter;
 
-    fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
+    async fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
         let sub = BoxedTell(Arc::new(ctx.myself().clone()));
-        self.dl_chan.tell(
-            Subscribe {
-                topic: All.into(),
-                actor: sub,
-            },
-            None,
-        );
+        self.dl_chan
+            .tell(
+                Subscribe {
+                    topic: All.into(),
+                    actor: sub,
+                },
+                None,
+            )
+            .await;
     }
 
-    fn recv(&mut self, _: &Context<Self::Msg>, msg: Self::Msg, _: Option<BasicActorRef>) {
+    async fn recv(&mut self, _: &Context<Self::Msg>, msg: Self::Msg, _: Option<BasicActorRef>) {
         info!(
             "DeadLetter: {:?} => {:?} ({:?})",
             msg.send_out, msg.recipient, msg.msg

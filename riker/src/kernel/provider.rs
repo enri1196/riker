@@ -4,7 +4,10 @@ use tracing::trace;
 use std::sync::Arc;
 
 use crate::{
-    actor::{actor_cell::{ActorCell, ExtendedCell}, *},
+    actor::{
+        actor_cell::{ActorCell, ExtendedCell},
+        *,
+    },
     kernel::{kernel, mailbox::mailbox},
     system::{ActorSystem, SysActors, SystemMsg},
     validate::validate_name,
@@ -18,7 +21,7 @@ impl Provider {
         Self(Arc::new(DashMap::new()))
     }
 
-    pub fn create_actor<A>(
+    pub async fn create_actor<A>(
         &self,
         props: BoxActorProd<A>,
         name: &str,
@@ -53,13 +56,13 @@ impl Provider {
             sender,
         );
 
-        let k = kernel(props, cell.clone(), mb, sys)?;
+        let k = kernel(props, cell.clone(), mb, sys).await?;
         let cell = cell.init(&k);
 
         let actor = ActorRef::new(cell);
         let child = BasicActorRef::from(actor.clone());
         parent.cell.add_child(child);
-        actor.sys_tell(SystemMsg::ActorInit);
+        actor.sys_tell(SystemMsg::ActorInit).await;
 
         Ok(actor)
     }
@@ -78,18 +81,18 @@ impl Provider {
     }
 }
 
-pub fn create_root(sys: &ActorSystem) -> SysActors {
-    let root = root(sys);
+pub async fn create_root(sys: &ActorSystem) -> SysActors {
+    let root = root(sys).await;
 
     SysActors {
-        user: guardian("user", "/user", &root, sys),
-        sysm: guardian("system", "/system", &root, sys),
-        temp: guardian("temp", "/temp", &root, sys),
+        user: guardian("user", "/user", &root, sys).await,
+        sysm: guardian("system", "/system", &root, sys).await,
+        temp: guardian("temp", "/temp", &root, sys).await,
         root,
     }
 }
 
-fn root(sys: &ActorSystem) -> BasicActorRef {
+async fn root(sys: &ActorSystem) -> BasicActorRef {
     let uri = ActorUri {
         name: Arc::from("root"),
         path: ActorPath::new("/"),
@@ -132,14 +135,19 @@ fn root(sys: &ActorSystem) -> BasicActorRef {
         sender,
     );
 
-    let k = kernel(props, cell.clone(), mb, sys).unwrap();
+    let k = kernel(props, cell.clone(), mb, sys).await.unwrap();
     let cell = cell.init(&k);
     let actor_ref = ActorRef::new(cell);
 
     BasicActorRef::from(actor_ref)
 }
 
-fn guardian(name: &str, path: &str, root: &BasicActorRef, sys: &ActorSystem) -> BasicActorRef {
+async fn guardian(
+    name: &str,
+    path: &str,
+    root: &BasicActorRef,
+    sys: &ActorSystem,
+) -> BasicActorRef {
     let uri = ActorUri {
         name: Arc::from(name),
         path: ActorPath::new(path),
@@ -159,7 +167,7 @@ fn guardian(name: &str, path: &str, root: &BasicActorRef, sys: &ActorSystem) -> 
         sender,
     );
 
-    let k = kernel(props, cell.clone(), mb, sys).unwrap();
+    let k = kernel(props, cell.clone(), mb, sys).await.unwrap();
     let cell = cell.init(&k);
     let actor_ref = ActorRef::new(cell);
 
@@ -178,12 +186,13 @@ impl ActorFactoryArgs<String> for Guardian {
     }
 }
 
+#[async_trait::async_trait]
 impl Actor for Guardian {
     type Msg = SystemMsg;
 
-    fn recv(&mut self, _: &Context<Self::Msg>, _: Self::Msg, _: Option<BasicActorRef>) {}
+    async fn recv(&mut self, _: &Context<Self::Msg>, _: Self::Msg, _: Option<BasicActorRef>) {}
 
-    fn post_stop(&mut self) {
+    async fn post_stop(&mut self) {
         trace!("{} guardian stopped", self.name);
     }
 }

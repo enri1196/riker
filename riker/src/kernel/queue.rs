@@ -1,4 +1,4 @@
-use std::sync::{
+use tokio::sync::{
     mpsc::{channel, Receiver, Sender},
     Mutex,
 };
@@ -6,7 +6,7 @@ use std::sync::{
 use crate::{Envelope, Message};
 
 pub fn queue<Msg: Message>() -> (QueueWriter<Msg>, QueueReader<Msg>) {
-    let (tx, rx) = channel::<Envelope<Msg>>();
+    let (tx, rx) = channel::<Envelope<Msg>>(100);
 
     let qw = QueueWriter { tx };
 
@@ -28,9 +28,10 @@ pub struct QueueWriter<Msg: Message> {
 }
 
 impl<Msg: Message> QueueWriter<Msg> {
-    pub fn try_enqueue(&self, msg: Envelope<Msg>) -> EnqueueResult<Msg> {
+    pub async fn try_enqueue(&self, msg: Envelope<Msg>) -> EnqueueResult<Msg> {
         self.tx
             .send(msg)
+            .await
             .map(|_| ())
             .map_err(|e| EnqueueError { msg: e.0 })
     }
@@ -46,18 +47,17 @@ struct QueueReaderInner<Msg: Message> {
 }
 
 impl<Msg: Message> QueueReader<Msg> {
-    #[allow(dead_code)]
-    pub fn dequeue(&self) -> Envelope<Msg> {
-        let mut inner = self.inner.lock().unwrap();
+    pub async fn dequeue(&self) -> Envelope<Msg> {
+        let mut inner = self.inner.lock().await;
         if let Some(item) = inner.next_item.take() {
             item
         } else {
-            inner.rx.recv().unwrap()
+            inner.rx.recv().await.unwrap()
         }
     }
 
-    pub fn try_dequeue(&self) -> DequeueResult<Envelope<Msg>> {
-        let mut inner = self.inner.lock().unwrap();
+    pub async fn try_dequeue(&self) -> DequeueResult<Envelope<Msg>> {
+        let mut inner = self.inner.lock().await;
         if let Some(item) = inner.next_item.take() {
             Ok(item)
         } else {
@@ -65,8 +65,8 @@ impl<Msg: Message> QueueReader<Msg> {
         }
     }
 
-    pub fn has_msgs(&self) -> bool {
-        let mut inner = self.inner.lock().unwrap();
+    pub async fn has_msgs(&self) -> bool {
+        let mut inner = self.inner.lock().await;
         inner.next_item.is_some() || {
             match inner.rx.try_recv() {
                 Ok(item) => {

@@ -1,8 +1,5 @@
-use std::{
-    sync::mpsc,
-    thread,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
+use tokio::sync::mpsc;
 
 use chrono::{DateTime, Utc};
 use config::Config;
@@ -17,8 +14,9 @@ pub type TimerRef = mpsc::Sender<Job>;
 
 pub type ScheduleId = Uuid;
 
+#[async_trait::async_trait]
 pub trait Timer {
-    fn schedule<T, M>(
+    async fn schedule<T, M>(
         &self,
         initial_delay: Duration,
         interval: Duration,
@@ -30,7 +28,7 @@ pub trait Timer {
         T: Message + Into<M>,
         M: Message;
 
-    fn schedule_once<T, M>(
+    async fn schedule_once<T, M>(
         &self,
         delay: Duration,
         receiver: ActorRef<M>,
@@ -41,7 +39,7 @@ pub trait Timer {
         T: Message + Into<M>,
         M: Message;
 
-    fn schedule_at_time<T, M>(
+    async fn schedule_at_time<T, M>(
         &self,
         time: DateTime<Utc>,
         receiver: ActorRef<M>,
@@ -52,7 +50,7 @@ pub trait Timer {
         T: Message + Into<M>,
         M: Message;
 
-    fn cancel_schedule(&self, id: Uuid);
+    async fn cancel_schedule(&self, id: Uuid);
 }
 
 pub enum Job {
@@ -70,8 +68,11 @@ pub struct OnceJob {
 }
 
 impl OnceJob {
-    pub fn send(mut self) {
-        let _ = self.receiver.try_tell_any(&mut self.msg, self.send_out);
+    pub async fn send(mut self) {
+        let _ = self
+            .receiver
+            .try_tell_any(&mut self.msg, self.send_out)
+            .await;
     }
 }
 
@@ -85,10 +86,11 @@ pub struct RepeatJob {
 }
 
 impl RepeatJob {
-    pub fn send(&mut self) {
+    pub async fn send(&mut self) {
         let _ = self
             .receiver
-            .try_tell_any(&mut self.msg, self.send_out.clone());
+            .try_tell_any(&mut self.msg, self.send_out.clone())
+            .await;
     }
 }
 
@@ -108,26 +110,27 @@ impl BasicTimer {
             repeat_jobs: Vec::new(),
         };
 
-        let (tx, rx) = mpsc::channel();
-        thread::spawn(move || loop {
-            process.execute_once_jobs();
-            process.execute_repeat_jobs();
+        let (tx, mut rx) = mpsc::channel(100);
+        tokio::spawn(async move {
+            loop {
+                process.execute_once_jobs().await;
+                process.execute_repeat_jobs().await;
 
-            if let Ok(job) = rx.try_recv() {
-                match job {
-                    Job::Cancel(id) => process.cancel(&id),
-                    Job::Once(job) => process.schedule_once(job),
-                    Job::Repeat(job) => process.schedule_repeat(job),
+                if let Ok(job) = rx.try_recv() {
+                    match job {
+                        Job::Cancel(id) => process.cancel(&id),
+                        Job::Once(job) => process.schedule_once(job).await,
+                        Job::Repeat(job) => process.schedule_repeat(job).await,
+                    }
                 }
+                tokio::time::sleep(Duration::from_millis(cfg.frequency_millis)).await;
             }
-
-            thread::sleep(Duration::from_millis(cfg.frequency_millis));
         });
 
         tx
     }
 
-    pub fn execute_once_jobs(&mut self) {
+    pub async fn execute_once_jobs(&mut self) {
         let (send, keep): (Vec<OnceJob>, Vec<OnceJob>) = self
             .once_jobs
             .drain(..)
@@ -135,7 +138,7 @@ impl BasicTimer {
 
         // send those messages where the 'send_at' time has been reached or elapsed
         for job in send {
-            job.send();
+            job.send().await;
         }
 
         // for those messages that are not to be sent yet, just put them back on the vec
@@ -144,11 +147,11 @@ impl BasicTimer {
         }
     }
 
-    pub fn execute_repeat_jobs(&mut self) {
+    pub async fn execute_repeat_jobs(&mut self) {
         for job in self.repeat_jobs.iter_mut() {
             if Instant::now() >= job.send_at {
                 job.send_at = Instant::now() + job.interval;
-                job.send();
+                job.send().await;
             }
         }
     }
@@ -166,17 +169,17 @@ impl BasicTimer {
         }
     }
 
-    pub fn schedule_once(&mut self, job: OnceJob) {
+    pub async fn schedule_once(&mut self, job: OnceJob) {
         if Instant::now() >= job.send_at {
-            job.send();
+            job.send().await;
         } else {
             self.once_jobs.push(job);
         }
     }
 
-    pub fn schedule_repeat(&mut self, mut job: RepeatJob) {
+    pub async fn schedule_repeat(&mut self, mut job: RepeatJob) {
         if Instant::now() >= job.send_at {
-            job.send();
+            job.send().await;
         }
         self.repeat_jobs.push(job);
     }

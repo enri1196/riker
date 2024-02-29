@@ -1,9 +1,14 @@
-use crate::{actors::SystemMsg, Message};
-
-use super::{
-    actor_ref::BoxedTell, ActorArgs, ActorFactory, ActorFactoryArgs, ActorPath, ActorRef, ActorUri, BasicActorRef, BoxActorProd, Context, CreateError, Strategy
+use crate::{
+    actors::{ActorSystem, SystemMsg},
+    Message,
 };
 
+use super::{
+    actor_cell::Children, actor_ref::BoxedTell, ActorArgs, ActorFactory, ActorFactoryArgs,
+    ActorPath, ActorRef, ActorUri, BasicActorRef, BoxActorProd, Context, CreateError, Strategy,
+};
+
+#[async_trait::async_trait]
 pub trait Actor: Send + 'static {
     type Msg: Message;
 
@@ -14,7 +19,7 @@ pub trait Actor: Send + 'static {
     ///
     /// Panics in `pre_start` do not invoke the
     /// supervision strategy and the actor will be terminated.
-    fn pre_start(&mut self, ctx: &Context<Self::Msg>) {}
+    async fn pre_start(&mut self, _ctx: &Context<Self::Msg>) {}
 
     /// Invoked after an actor has started.
     ///
@@ -22,10 +27,10 @@ pub trait Actor: Send + 'static {
     /// to a log file, emmitting metrics.
     ///
     /// Panics in `post_start` follow the supervision strategy.
-    fn post_start(&mut self, ctx: &Context<Self::Msg>) {}
+    async fn post_start(&mut self, _ctx: &Context<Self::Msg>) {}
 
     /// Invoked after an actor has been stopped.
-    fn post_stop(&mut self) {}
+    async fn post_stop(&mut self) {}
 
     /// Return a supervisor strategy that will be used when handling failed child actors.
     fn supervisor_strategy(&self) -> Strategy {
@@ -36,11 +41,11 @@ pub trait Actor: Send + 'static {
     ///
     /// It is guaranteed that only one message in the actor's mailbox is processed
     /// at any one time, including `recv` and `sys_recv`.
-    fn sys_recv(
+    async fn sys_recv(
         &mut self,
-        ctx: &Context<Self::Msg>,
-        msg: SystemMsg,
-        send_out: Option<BasicActorRef>,
+        _ctx: &Context<Self::Msg>,
+        _msg: SystemMsg,
+        _send_out: Option<BasicActorRef>,
     ) {
     }
 
@@ -48,7 +53,12 @@ pub trait Actor: Send + 'static {
     ///
     /// It is guaranteed that only one message in the actor's mailbox is processed
     /// at any one time, including `recv` and `sys_recv`.
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>);
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    );
 }
 
 pub trait ActorReference {
@@ -61,6 +71,8 @@ pub trait ActorReference {
     ///
     /// Returns the URI for this actor.
     fn uri(&self) -> &ActorUri;
+
+    fn system(&self) -> &ActorSystem;
 
     /// Actor path.
     ///
@@ -89,17 +101,19 @@ pub trait ActorReference {
     fn is_child(&self, actor: &BasicActorRef) -> bool;
 
     /// Iterator over children references.
-    fn children<'a>(&'a self) -> Box<dyn Iterator<Item = BasicActorRef> + 'a>;
+    fn children(&self) -> &Children;
 }
 
+#[async_trait::async_trait]
 pub trait Tell<T>: ActorReference + SysTell + Send + 'static {
-    fn tell(&self, msg: T, send_out: Option<BasicActorRef>);
+    async fn tell(&self, msg: T, send_out: Option<BasicActorRef>);
     /// Send a system message to this actor
     fn box_clone(&self) -> BoxedTell<T>;
 }
 
+#[async_trait::async_trait]
 pub trait SysTell: ActorReference + Send {
-    fn sys_tell(&self, msg: SystemMsg);
+    async fn sys_tell(&self, msg: SystemMsg);
 }
 
 /// Receive and handle a specific message type
@@ -109,7 +123,7 @@ pub trait SysTell: ActorReference + Send {
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust
 /// # use riker::actors::*;
 ///
 /// #[derive(Clone, Debug)]
@@ -120,19 +134,21 @@ pub trait SysTell: ActorReference + Send {
 /// #[derive(Default)]
 /// struct MyActor;
 ///
+/// #[async_trait::async_trait]
 /// impl Actor for MyActor {
 ///     type Msg = MyActorMsg; // <-- MyActorMsg is provided for us
 ///
-///     fn recv(&mut self,
+///     async fn recv(&mut self,
 ///                 ctx: &Context<Self::Msg>,
 ///                 msg: Self::Msg,
 ///                 send_out: Option<BasicActorRef>) {
-///         self.receive(ctx, msg, send_out); // <-- call the respective implementation
+///         self.receive(ctx, msg, send_out).await; // <-- call the respective implementation
 ///     }
 /// }
 ///
+/// #[async_trait::async_trait]
 /// impl Receive<Foo> for MyActor {
-///     fn receive(&mut self,
+///     async fn receive(&mut self,
 ///                 ctx: &Context<Self::Msg>,
 ///                 msg: Foo, // <-- receive Foo
 ///                 send_out: Option<BasicActorRef>) {
@@ -140,8 +156,9 @@ pub trait SysTell: ActorReference + Send {
 ///     }
 /// }
 ///
+/// #[async_trait::async_trait]
 /// impl Receive<Bar> for MyActor {
-///     fn receive(&mut self,
+///     async fn receive(&mut self,
 ///                 ctx: &Context<Self::Msg>,
 ///                 msg: Bar, // <-- receive Bar
 ///                 send_out: Option<BasicActorRef>) {
@@ -151,19 +168,25 @@ pub trait SysTell: ActorReference + Send {
 ///
 /// // main
 /// # tokio_test::block_on(async {
-/// let sys = ActorSystem::new().unwrap();
-/// let actor = sys.actor_of::<MyActor>("my-actor").unwrap();
+/// let sys = ActorSystem::new().await.unwrap();
+/// let actor = sys.actor_of::<MyActor>("my-actor").await.unwrap();
 ///
-/// actor.tell(Foo, None);
-/// actor.tell(Bar, None);
+/// actor.tell(Foo, None).await;
+/// actor.tell(Bar, None).await;
 /// })
 /// ```
+#[async_trait::async_trait]
 pub trait Receive<Msg: Message>: Actor {
     /// Invoked when an actor receives a message
     ///
     /// It is guaranteed that only one message in the actor's mailbox is processed
     /// at any one time, including `receive`, `other_receive` and `system_receive`.
-    fn receive(&mut self, ctx: &Context<Self::Msg>, msg: Msg, send_out: Option<BasicActorRef>);
+    async fn receive(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Msg,
+        send_out: Option<BasicActorRef>,
+    );
 }
 
 /// Produces `ActorRef`s. `actor_of` blocks on the current thread until
@@ -172,8 +195,9 @@ pub trait Receive<Msg: Message>: Actor {
 /// It is advised to return from the actor's factory method quickly and
 /// handle any initialization in the actor's `pre_start` method, which is
 /// invoked after the `ActorRef` is returned.
+#[async_trait::async_trait]
 pub trait ActorRefFactory {
-    fn actor_of_props<A>(
+    async fn actor_of_props<A>(
         &self,
         name: &str,
         props: BoxActorProd<A>,
@@ -181,11 +205,11 @@ pub trait ActorRefFactory {
     where
         A: Actor;
 
-    fn actor_of<A>(&self, name: &str) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
+    async fn actor_of<A>(&self, name: &str) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
     where
         A: ActorFactory + Actor;
 
-    fn actor_of_args<A, Args>(
+    async fn actor_of_args<A, Args>(
         &self,
         name: &str,
         args: Args,
@@ -194,23 +218,24 @@ pub trait ActorRefFactory {
         Args: ActorArgs,
         A: ActorFactoryArgs<Args>;
 
-    fn stop(&self, actor: impl SysTell);
+    async fn stop(&self, actor: impl SysTell);
 }
 
 /// Produces `ActorRef`s under the `temp` guardian actor.
+#[async_trait::async_trait]
 pub trait TmpActorRefFactory {
-    fn tmp_actor_of_props<A>(
+    async fn tmp_actor_of_props<A>(
         &self,
         props: BoxActorProd<A>,
     ) -> Result<ActorRef<A::Msg>, CreateError>
     where
         A: Actor;
 
-    fn tmp_actor_of<A>(&self) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
+    async fn tmp_actor_of<A>(&self) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>
     where
         A: ActorFactory + Actor;
 
-    fn tmp_actor_of_args<A, Args>(
+    async fn tmp_actor_of_args<A, Args>(
         &self,
         args: Args,
     ) -> Result<ActorRef<<A as Actor>::Msg>, CreateError>

@@ -19,23 +19,41 @@ struct Counter {
     count: u32,
 }
 
+#[async_trait::async_trait]
 impl Actor for Counter {
     // we used the #[actor] attribute so CounterMsg is the Msg type
     type Msg = CounterMsg;
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out);
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await;
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<TestProbe> for Counter {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, msg: TestProbe, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        msg: TestProbe,
+        _send_out: Option<BasicActorRef>,
+    ) {
         self.probe = Some(msg)
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<Add> for Counter {
-    fn receive(&mut self, _ctx: &Context<Self::Msg>, _msg: Add, _send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        _msg: Add,
+        _send_out: Option<BasicActorRef>,
+    ) {
         self.count += 1;
         if self.count == 1_000_000 {
             self.probe.as_ref().unwrap().0.event(())
@@ -45,11 +63,11 @@ impl Receive<Add> for Counter {
 
 #[tokio::test]
 async fn actor_create() {
-    let sys = ActorSystem::new().unwrap();
+    let sys = ActorSystem::new().await.unwrap();
 
-    assert!(sys.actor_of::<Counter>("valid-name").is_ok());
+    assert!(sys.actor_of::<Counter>("valid-name").await.is_ok());
 
-    match sys.actor_of::<Counter>("/") {
+    match sys.actor_of::<Counter>("/").await {
         Ok(_) => panic!("test should not reach here"),
         Err(e) => {
             // test Display
@@ -66,25 +84,25 @@ async fn actor_create() {
             assert_eq!(format!("{:#?}", e), "InvalidName(\n    \"/\",\n)");
         }
     }
-    assert!(sys.actor_of::<Counter>("*").is_err());
-    assert!(sys.actor_of::<Counter>("/a/b/c").is_err());
-    assert!(sys.actor_of::<Counter>("@").is_err());
-    assert!(sys.actor_of::<Counter>("#").is_err());
-    assert!(sys.actor_of::<Counter>("abc*").is_err());
-    assert!(sys.actor_of::<Counter>("!").is_err());
+    assert!(sys.actor_of::<Counter>("*").await.is_err());
+    assert!(sys.actor_of::<Counter>("/a/b/c").await.is_err());
+    assert!(sys.actor_of::<Counter>("@").await.is_err());
+    assert!(sys.actor_of::<Counter>("#").await.is_err());
+    assert!(sys.actor_of::<Counter>("abc*").await.is_err());
+    assert!(sys.actor_of::<Counter>("!").await.is_err());
 }
 
 #[tokio::test]
 async fn actor_tell() {
-    let sys = ActorSystem::new().unwrap();
+    let sys = ActorSystem::new().await.unwrap();
 
-    let actor = sys.actor_of::<Counter>("me").unwrap();
+    let actor = sys.actor_of::<Counter>("me").await.unwrap();
 
     let (probe, mut listen) = probe();
-    actor.tell(TestProbe(probe), None);
+    actor.tell(TestProbe(probe), None).await;
 
     for _ in 0..1_000_000 {
-        actor.tell(Add, None);
+        actor.tell(Add, None).await;
     }
 
     p_assert_eq!(listen, ());
@@ -92,21 +110,25 @@ async fn actor_tell() {
 
 #[tokio::test]
 async fn actor_try_tell() {
-    let sys = ActorSystem::new().unwrap();
+    let sys = ActorSystem::new().await.unwrap();
 
-    let actor = sys.actor_of::<Counter>("me").unwrap();
+    let actor = sys.actor_of::<Counter>("me").await.unwrap();
     let actor: BasicActorRef = actor.into();
 
     let (probe, mut listen) = probe();
     actor
         .try_tell(CounterMsg::TestProbe(TestProbe(probe)), None)
+        .await
         .unwrap();
 
-    assert!(actor.try_tell(CounterMsg::Add(Add), None).is_ok());
-    assert!(actor.try_tell("invalid-type".to_string(), None).is_err());
+    assert!(actor.try_tell(CounterMsg::Add(Add), None).await.is_ok());
+    assert!(actor
+        .try_tell("invalid-type".to_string(), None)
+        .await
+        .is_err());
 
     for _ in 0..1_000_000 {
-        actor.try_tell(CounterMsg::Add(Add), None).unwrap();
+        actor.try_tell(CounterMsg::Add(Add), None).await.unwrap();
     }
 
     p_assert_eq!(listen, ());
@@ -117,26 +139,32 @@ struct Parent {
     probe: Option<TestProbe>,
 }
 
+#[async_trait::async_trait]
 impl Actor for Parent {
     type Msg = TestProbe;
 
-    fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
-        ctx.actor_of::<Child>("child_a").unwrap();
+    async fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
+        ctx.actor_of::<Child>("child_a").await.unwrap();
 
-        ctx.actor_of::<Child>("child_b").unwrap();
+        ctx.actor_of::<Child>("child_b").await.unwrap();
 
-        ctx.actor_of::<Child>("child_c").unwrap();
+        ctx.actor_of::<Child>("child_c").await.unwrap();
 
-        ctx.actor_of::<Child>("child_d").unwrap();
+        ctx.actor_of::<Child>("child_d").await.unwrap();
     }
 
-    fn post_stop(&mut self) {
+    async fn post_stop(&mut self) {
         // All children have been terminated at this point
         // and we can signal back that the parent has stopped
         self.probe.as_ref().unwrap().0.event(());
     }
 
-    fn recv(&mut self, _ctx: &Context<Self::Msg>, msg: Self::Msg, _send_out: Option<BasicActorRef>) {
+    async fn recv(
+        &mut self,
+        _ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        _send_out: Option<BasicActorRef>,
+    ) {
         self.probe = Some(msg);
         self.probe.as_ref().unwrap().0.event(());
     }
@@ -145,25 +173,32 @@ impl Actor for Parent {
 #[derive(Default)]
 struct Child;
 
+#[async_trait::async_trait]
 impl Actor for Child {
     type Msg = ();
 
-    fn recv(&mut self, _: &Context<Self::Msg>, _: Self::Msg, _send_out: Option<BasicActorRef>) {}
+    async fn recv(
+        &mut self,
+        _: &Context<Self::Msg>,
+        _: Self::Msg,
+        _send_out: Option<BasicActorRef>,
+    ) {
+    }
 }
 
 #[tokio::test]
 async fn actor_stop() {
-    let system = ActorSystem::new().unwrap();
+    let system = ActorSystem::new().await.unwrap();
 
-    let parent = system.actor_of::<Parent>("parent").unwrap();
+    let parent = system.actor_of::<Parent>("parent").await.unwrap();
 
     let (probe, mut listen) = probe();
-    parent.tell(TestProbe(probe), None);
+    parent.tell(TestProbe(probe), None).await;
     system.print_tree();
 
     // wait for the probe to arrive at the actor before attempting to stop the actor
     listen.recv().await;
 
-    system.stop(&parent);
+    system.stop(&parent).await;
     p_assert_eq!(listen, ());
 }

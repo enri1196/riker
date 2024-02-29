@@ -5,7 +5,7 @@ use quote::quote;
 use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::token::{Colon2, Comma};
+use syn::token::{Comma, PathSep};
 use syn::{DeriveInput, Generics, PathSegment, TypePath};
 
 struct MsgTypes {
@@ -51,7 +51,7 @@ impl Parse for MsgTypes {
     }
 }
 
-fn get_name(segments: &Punctuated<PathSegment, Colon2>) -> Ident {
+fn get_name(segments: &Punctuated<PathSegment, PathSep>) -> Ident {
     let vname = segments
         .iter()
         .map(|seg| {
@@ -116,13 +116,14 @@ fn receive(aname: &Ident, gen: &Generics, name: &Ident, types: &MsgTypes) -> Tok
         let vname = &t.name;
         let tname = &t.mtype;
         quote! {
-            #name::#vname(msg) => <#aname #ty_generics as Receive<#tname>>::receive(self, ctx, msg, send_out),
+            #name::#vname(msg) => <#aname #ty_generics as Receive<#tname>>::receive(self, ctx, msg, send_out).await,
         }
     });
 
     quote! {
+        #[async_trait::async_trait]
         impl #impl_generics Receive<#name> for #aname #ty_generics #where_clause {
-            fn receive(&mut self,
+            async fn receive(&mut self,
                         ctx: &Context<Self::Msg>,
                         msg: Self::Msg,
                         send_out: Option<BasicActorRef>) {

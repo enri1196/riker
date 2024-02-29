@@ -1,4 +1,3 @@
-#![allow(unused_variables)]
 pub(crate) mod actor_cell;
 pub(crate) mod actor_ref;
 pub(crate) mod actor_traits;
@@ -16,9 +15,8 @@ use crate::validate::InvalidName;
 pub use self::{
     actor_traits::*,
     actor_cell::Context,
-    actor_ref::{
-        ActorRef, BasicActorRef, BoxedTell
-    },
+    actor_ref::{ActorRef, BasicActorRef, BoxedTell},
+    actor_traits::*,
     channel::{
         channel, All, Channel, ChannelMsg, ChannelRef, DLChannelMsg, DeadLetter, EventsChannel,
         Publish, Subscribe, SysTopic, Topic, Unsubscribe, UnsubscribeAll,
@@ -31,7 +29,6 @@ pub use self::{
 
 use crate::system::SystemMsg;
 
-#[allow(unused)]
 pub type MsgResult<T> = Result<(), MsgError<T>>;
 
 /// Internal message error when a message can't be added to an actor's mailbox
@@ -131,36 +128,42 @@ impl fmt::Debug for RestartError {
     }
 }
 
+#[async_trait::async_trait]
 impl<A: Actor + ?Sized> Actor for Box<A> {
     type Msg = A::Msg;
 
-    fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
-        (**self).pre_start(ctx);
+    async fn pre_start(&mut self, ctx: &Context<Self::Msg>) {
+        (**self).pre_start(ctx).await;
     }
 
-    fn post_start(&mut self, ctx: &Context<Self::Msg>) {
-        (**self).post_start(ctx)
+    async fn post_start(&mut self, ctx: &Context<Self::Msg>) {
+        (**self).post_start(ctx).await
     }
 
-    fn post_stop(&mut self) {
-        (**self).post_stop()
+    async fn post_stop(&mut self) {
+        (**self).post_stop().await
     }
 
-    fn sys_recv(
+    async fn sys_recv(
         &mut self,
         ctx: &Context<Self::Msg>,
         msg: SystemMsg,
         send_out: Option<BasicActorRef>,
     ) {
-        (**self).sys_recv(ctx, msg, send_out)
+        (**self).sys_recv(ctx, msg, send_out).await
     }
 
     fn supervisor_strategy(&self) -> Strategy {
         (**self).supervisor_strategy()
     }
 
-    fn recv(&mut self, ctx: &Context<Self::Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
-        (**self).recv(ctx, msg, send_out)
+    async fn recv(
+        &mut self,
+        ctx: &Context<Self::Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        (**self).recv(ctx, msg, send_out).await
     }
 }
 

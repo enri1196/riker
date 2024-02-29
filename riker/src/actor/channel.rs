@@ -2,8 +2,8 @@ use std::{collections::HashMap, hash::Hash};
 
 use crate::{
     actor::{
-        Actor, ActorRef, ActorRefFactory, ActorReference, BasicActorRef, Context,
-        CreateError, Receive,
+        Actor, ActorRef, ActorRefFactory, ActorReference, BasicActorRef, Context, CreateError,
+        Receive,
     },
     system::{SystemEvent, SystemMsg},
     Message,
@@ -33,6 +33,7 @@ impl<Msg: Message> Default for Channel<Msg> {
     }
 }
 
+#[async_trait::async_trait]
 impl<Msg> Actor for Channel<Msg>
 where
     Msg: Message,
@@ -40,7 +41,7 @@ where
     type Msg = ChannelMsg<Msg>;
 
     // todo subscribe to events to unsub subscribers when they die
-    fn pre_start(&mut self, ctx: &ChannelCtx<Msg>) {
+    async fn pre_start(&mut self, _ctx: &ChannelCtx<Msg>) {
         // let sub = Subscribe {
         //     topic: SysTopic::ActorTerminated.into(),
         //     actor: Box::new(ctx.myself.clone())//.into()
@@ -50,14 +51,24 @@ where
         // ctx.myself.tell(msg, None);
     }
 
-    fn recv(&mut self, ctx: &ChannelCtx<Msg>, msg: ChannelMsg<Msg>, send_out: Option<BasicActorRef>) {
-        self.receive(ctx, msg, send_out);
+    async fn recv(
+        &mut self,
+        ctx: &ChannelCtx<Msg>,
+        msg: ChannelMsg<Msg>,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.receive(ctx, msg, send_out).await;
     }
 
     // We expect to receive ActorTerminated messages because we subscribed
     // to this system event. This allows us to remove actors that have been
     // terminated but did not explicity unsubscribe before terminating.
-    fn sys_recv(&mut self, _: &ChannelCtx<Msg>, msg: SystemMsg, send_out: Option<BasicActorRef>) {
+    async fn sys_recv(
+        &mut self,
+        _: &ChannelCtx<Msg>,
+        msg: SystemMsg,
+        _send_out: Option<BasicActorRef>,
+    ) {
         if let SystemMsg::Event(evt) = msg {
             if let SystemEvent::ActorTerminated(terminated) = evt {
                 let subs = self.subs.clone();
@@ -70,44 +81,68 @@ where
     }
 }
 
+#[async_trait::async_trait]
 impl<Msg> Receive<ChannelMsg<Msg>> for Channel<Msg>
 where
     Msg: Message,
 {
-    fn receive(&mut self, ctx: &ChannelCtx<Msg>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        ctx: &ChannelCtx<Msg>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
         match msg {
-            ChannelMsg::Publish(p) => self.receive(ctx, p, send_out),
-            ChannelMsg::Subscribe(sub) => self.receive(ctx, sub, send_out),
-            ChannelMsg::Unsubscribe(unsub) => self.receive(ctx, unsub, send_out),
-            ChannelMsg::UnsubscribeAll(unsub) => self.receive(ctx, unsub, send_out),
+            ChannelMsg::Publish(p) => self.receive(ctx, p, send_out).await,
+            ChannelMsg::Subscribe(sub) => self.receive(ctx, sub, send_out).await,
+            ChannelMsg::Unsubscribe(unsub) => self.receive(ctx, unsub, send_out).await,
+            ChannelMsg::UnsubscribeAll(unsub) => self.receive(ctx, unsub, send_out).await,
         }
     }
 }
 
+#[async_trait::async_trait]
 impl<Msg> Receive<Subscribe<Msg>> for Channel<Msg>
 where
     Msg: Message,
 {
-    fn receive(&mut self, ctx: &ChannelCtx<Msg>, msg: Subscribe<Msg>, send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &ChannelCtx<Msg>,
+        msg: Subscribe<Msg>,
+        _send_out: Option<BasicActorRef>,
+    ) {
         let subs = self.subs.entry(msg.topic).or_default();
         subs.push(msg.actor);
     }
 }
 
+#[async_trait::async_trait]
 impl<Msg> Receive<Unsubscribe<Msg>> for Channel<Msg>
 where
     Msg: Message,
 {
-    fn receive(&mut self, ctx: &ChannelCtx<Msg>, msg: Unsubscribe<Msg>, send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &ChannelCtx<Msg>,
+        msg: Unsubscribe<Msg>,
+        _send_out: Option<BasicActorRef>,
+    ) {
         unsubscribe(&mut self.subs, &msg.topic, &msg.actor);
     }
 }
 
+#[async_trait::async_trait]
 impl<Msg> Receive<UnsubscribeAll<Msg>> for Channel<Msg>
 where
     Msg: Message,
 {
-    fn receive(&mut self, ctx: &ChannelCtx<Msg>, msg: UnsubscribeAll<Msg>, send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &ChannelCtx<Msg>,
+        msg: UnsubscribeAll<Msg>,
+        _send_out: Option<BasicActorRef>,
+    ) {
         let subs = self.subs.clone();
 
         for topic in subs.keys() {
@@ -116,22 +151,28 @@ where
     }
 }
 
+#[async_trait::async_trait]
 impl<Msg> Receive<Publish<Msg>> for Channel<Msg>
 where
     Msg: Message,
 {
-    fn receive(&mut self, ctx: &ChannelCtx<Msg>, msg: Publish<Msg>, send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        _ctx: &ChannelCtx<Msg>,
+        msg: Publish<Msg>,
+        send_out: Option<BasicActorRef>,
+    ) {
         // send system event to actors subscribed to all topics
         if let Some(subs) = self.subs.get(&All.into()) {
             for sub in subs.iter() {
-                sub.tell(msg.msg.clone(), send_out.clone());
+                sub.tell(msg.msg.clone(), send_out.clone()).await;
             }
         }
 
         // send system event to actors subscribed to the topic
         if let Some(subs) = self.subs.get(&msg.topic) {
             for sub in subs.iter() {
-                sub.tell(msg.msg.clone(), send_out.clone());
+                sub.tell(msg.msg.clone(), send_out.clone()).await;
             }
         }
     }
@@ -155,52 +196,65 @@ fn unsubscribe<Msg>(subs: &mut Subs<Msg>, topic: &Topic, actor: &dyn ActorRefere
 #[derive(Default)]
 pub struct EventsChannel(Channel<SystemEvent>);
 
+#[async_trait::async_trait]
 impl Actor for EventsChannel {
     type Msg = ChannelMsg<SystemEvent>;
 
-    fn pre_start(&mut self, ctx: &ChannelCtx<SystemEvent>) {
-        self.0.pre_start(ctx);
+    async fn pre_start(&mut self, ctx: &ChannelCtx<SystemEvent>) {
+        self.0.pre_start(ctx).await;
     }
 
-    fn recv(
+    async fn recv(
         &mut self,
         ctx: &ChannelCtx<SystemEvent>,
         msg: ChannelMsg<SystemEvent>,
         send_out: Option<BasicActorRef>,
     ) {
-        self.receive(ctx, msg, send_out);
+        self.receive(ctx, msg, send_out).await;
     }
 
-    fn sys_recv(&mut self, ctx: &ChannelCtx<SystemEvent>, msg: SystemMsg, send_out: Option<BasicActorRef>) {
-        self.0.sys_recv(ctx, msg, send_out);
+    async fn sys_recv(
+        &mut self,
+        ctx: &ChannelCtx<SystemEvent>,
+        msg: SystemMsg,
+        send_out: Option<BasicActorRef>,
+    ) {
+        self.0.sys_recv(ctx, msg, send_out).await;
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<ChannelMsg<SystemEvent>> for EventsChannel {
-    fn receive(&mut self, ctx: &ChannelCtx<SystemEvent>, msg: Self::Msg, send_out: Option<BasicActorRef>) {
+    async fn receive(
+        &mut self,
+        ctx: &ChannelCtx<SystemEvent>,
+        msg: Self::Msg,
+        send_out: Option<BasicActorRef>,
+    ) {
         // Publish variant uses specialized EventsChannel Receive
         // All other variants use the wrapped Channel (self.0) Receive(s)
         match msg {
-            ChannelMsg::Publish(p) => self.receive(ctx, p, send_out),
-            ChannelMsg::Subscribe(sub) => self.0.receive(ctx, sub, send_out),
-            ChannelMsg::Unsubscribe(unsub) => self.0.receive(ctx, unsub, send_out),
-            ChannelMsg::UnsubscribeAll(unsub) => self.0.receive(ctx, unsub, send_out),
+            ChannelMsg::Publish(p) => self.receive(ctx, p, send_out).await,
+            ChannelMsg::Subscribe(sub) => self.0.receive(ctx, sub, send_out).await,
+            ChannelMsg::Unsubscribe(unsub) => self.0.receive(ctx, unsub, send_out).await,
+            ChannelMsg::UnsubscribeAll(unsub) => self.0.receive(ctx, unsub, send_out).await,
         }
     }
 }
 
+#[async_trait::async_trait]
 impl Receive<Publish<SystemEvent>> for EventsChannel {
-    fn receive(
+    async fn receive(
         &mut self,
-        ctx: &ChannelCtx<SystemEvent>,
+        _ctx: &ChannelCtx<SystemEvent>,
         msg: Publish<SystemEvent>,
-        send_out: Option<BasicActorRef>,
+        _send_out: Option<BasicActorRef>,
     ) {
         // send system event to actors subscribed to all topics
         if let Some(subs) = self.0.subs.get(&All.into()) {
             for sub in subs.iter() {
                 let evt = SystemMsg::Event(msg.msg.clone());
-                sub.sys_tell(evt);
+                sub.sys_tell(evt).await;
             }
         }
 
@@ -208,7 +262,7 @@ impl Receive<Publish<SystemEvent>> for EventsChannel {
         if let Some(subs) = self.0.subs.get(&msg.topic) {
             for sub in subs.iter() {
                 let evt = SystemMsg::Event(msg.msg.clone());
-                sub.sys_tell(evt);
+                sub.sys_tell(evt).await;
             }
         }
     }
@@ -322,7 +376,7 @@ impl<'a> From<&'a SystemEvent> for Topic {
 pub struct All;
 
 impl From<All> for Topic {
-    fn from(all: All) -> Self {
+    fn from(_all: All) -> Self {
         Topic::from("*")
     }
 }
@@ -344,9 +398,12 @@ impl From<SysTopic> for Topic {
     }
 }
 
-pub fn channel<Msg>(name: &str, fact: &impl ActorRefFactory) -> Result<ChannelRef<Msg>, CreateError>
+pub async fn channel<Msg>(
+    name: &str,
+    fact: &impl ActorRefFactory,
+) -> Result<ChannelRef<Msg>, CreateError>
 where
     Msg: Message,
 {
-    fact.actor_of::<Channel<Msg>>(name)
+    fact.actor_of::<Channel<Msg>>(name).await
 }
