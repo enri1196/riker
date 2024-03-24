@@ -90,7 +90,7 @@ async fn schedule_at_time() {
     let (probe, mut listen) = probe();
 
     // use scheduler to set up probe at a specific time
-    let schedule_at = Utc::now() + CDuration::milliseconds(200);
+    let schedule_at = Utc::now() + CDuration::try_milliseconds(200).unwrap();
     sys.schedule_at_time(schedule_at, actor, None, TestProbe(probe))
         .await;
     p_assert_eq!(listen, ());
