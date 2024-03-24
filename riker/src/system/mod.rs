@@ -6,6 +6,7 @@ use std::{
     sync::Arc, fmt,
     time::{Duration, Instant},
 };
+use thiserror::Error;
 use tokio::sync::Mutex;
 
 use chrono::prelude::*;
@@ -131,30 +132,12 @@ pub enum SystemEventType {
     ActorCreated,
 }
 
+#[derive(Debug, Error)]
 pub enum SystemError {
+    #[error("Failed to create actor system. Cause: Sub module failed to start ({0})")]
     ModuleFailed(String),
+    #[error("Failed to create actor system. Cause: Invalid actor system name ({0})")]
     InvalidName(String),
-}
-
-impl fmt::Display for SystemError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            SystemError::ModuleFailed(ref m) => f.write_str(&format!(
-                "Failed to create actor system. Cause: Sub module failed to start ({})",
-                m
-            )),
-            SystemError::InvalidName(ref name) => f.write_str(&format!(
-                "Failed to create actor system. Cause: Invalid actor system name ({})",
-                name
-            )),
-        }
-    }
-}
-
-impl fmt::Debug for SystemError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(&self.to_string())
-    }
 }
 
 pub struct ProtoSystem {
