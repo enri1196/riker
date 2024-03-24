@@ -1,13 +1,33 @@
 pub(crate) mod logger;
 pub(crate) mod timer;
 
+use core::future::Future;
+use std::{
+    sync::Arc, fmt,
+    time::{Duration, Instant},
+};
+use tokio::sync::Mutex;
+
+use chrono::prelude::*;
+use config::Config;
+use tokio::{runtime::Handle, sync::oneshot, task::JoinHandle};
+use uuid::Uuid;
+
+use crate::{
+    actor::BasicActorRef,
+    actor::{props::ActorFactory, *},
+    actors::selection::RefSelectionFactory,
+    kernel::provider::{create_root, Provider},
+    load_config,
+    system::logger::*,
+    system::timer::*,
+    validate::{validate_name, InvalidPath},
+    AnyMessage, Message,
+};
+
 #[cfg(feature = "serde")]
 use serde_json::{json, Value};
 use tracing::debug;
-
-use std::fmt;
-
-use crate::{actor::BasicActorRef, actors::selection::RefSelectionFactory};
 
 use self::actor_ref::BoxedTell;
 // Public riker::system API (plus the pub data types in this file)
@@ -136,31 +156,6 @@ impl fmt::Debug for SystemError {
         f.write_str(&self.to_string())
     }
 }
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
-use tokio::sync::Mutex;
-
-use chrono::prelude::*;
-use config::Config;
-use futures::Future;
-use tokio::{runtime::Handle, sync::oneshot, task::JoinHandle};
-
-use uuid::Uuid;
-
-use crate::{
-    actor::{props::ActorFactory, *},
-    kernel::provider::{create_root, Provider},
-    load_config,
-    system::logger::*,
-    system::timer::*,
-    validate::{validate_name, InvalidPath},
-    AnyMessage, Message,
-};
-
-// 0. error results on any
-// 1. visibility
 
 pub struct ProtoSystem {
     id: Uuid,

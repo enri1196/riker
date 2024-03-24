@@ -1,3 +1,4 @@
+use core::future::Future;
 use std::{
     fmt,
     ops::Deref,
@@ -10,7 +11,6 @@ use std::{
 
 use chrono::prelude::*;
 use dashmap::DashMap;
-use futures::Future;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 

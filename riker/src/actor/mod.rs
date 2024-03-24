@@ -15,9 +15,9 @@ use crate::validate::InvalidName;
 
 // Public riker::actor API (plus the pub data types in this file)
 pub use self::{
-    actor_traits::*,
     actor_cell::Context,
     actor_ref::{ActorRef, BasicActorRef, BoxedTell},
+    actor_traits::*,
     channel::{
         channel, All, Channel, ChannelMsg, ChannelRef, DLChannelMsg, DeadLetter, EventsChannel,
         Publish, Subscribe, SysTopic, Topic, Unsubscribe, UnsubscribeAll,
