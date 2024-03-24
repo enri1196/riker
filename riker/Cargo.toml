@@ -16,24 +16,25 @@ travis-ci = { repository = "riker-rs/riker" }
 [dependencies]
 riker-macros = { path = "../riker-macros" }
 tokio = { version = "1.36.0", features = ["full"] }
-chrono = "0.4.34"
+chrono = "0.4.35"
 config = "0.14.0"
 futures = { version = "0.3.30", features = ["thread-pool"] }
 rand = "0.8.5"
-regex = "1.10.3"
-uuid = { version = "1.7.0", features = ["v4"] }
+regex = "1.10.4"
+uuid = { version = "1.8.0", features = ["v4"] }
 pin-utils = "0.1.0"
 tracing = "0.1.40"
-async-trait = "0.1.77"
-async-recursion = "1.0.5"
+async-trait = "0.1.79"
+async-recursion = "1.1.0"
+thiserror = "1.0.58"
 
 num_cpus = "1.16.0"
 dashmap = "5.5.3"
-serde_json = { version = "1.0.113", optional = true }
+serde_json = { version = "1.0.114", optional = true }
 
 [dev-dependencies]
 riker-testkit = { path = "../riker-testkit" }
-tokio-test = "0.4.3"
+tokio-test = "0.4.4"
 
 [features]
 serde = ["dep:serde_json"]

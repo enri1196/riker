@@ -9,6 +9,8 @@ pub(crate) mod uri;
 
 use std::fmt;
 
+use thiserror::Error;
+
 use crate::validate::InvalidName;
 
 // Public riker::actor API (plus the pub data types in this file)
@@ -32,7 +34,8 @@ pub type MsgResult<T> = Result<(), MsgError<T>>;
 
 /// Internal message error when a message can't be added to an actor's mailbox
 #[doc(hidden)]
-#[derive(Clone)]
+#[derive(Clone, Error)]
+#[error("The actor does not exist. It may have been terminated")]
 pub struct MsgError<T> {
     pub msg: T,
 }
@@ -40,12 +43,6 @@ pub struct MsgError<T> {
 impl<T> MsgError<T> {
     pub fn new(msg: T) -> Self {
         MsgError { msg }
-    }
-}
-
-impl<T> fmt::Display for MsgError<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str("The actor does not exist. It may have been terminated")
     }
 }
 
@@ -79,31 +76,16 @@ impl<T> fmt::Debug for TryMsgError<T> {
 }
 
 /// Error type when an actor fails to start during `actor_of`.
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum CreateError {
+    #[error("Failed to create actor. Cause: Actor panicked while starting")]
     Panicked,
+    #[error("Failed to create actor. Cause: System failure")]
     System,
+    #[error("Failed to create actor. Cause: Invalid actor name ({0})")]
     InvalidName(String),
+    #[error("Failed to create actor. Cause: An actor at the same path already exists ({0})")]
     AlreadyExists(ActorPath),
-}
-
-impl fmt::Display for CreateError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Self::Panicked => {
-                f.write_str("Failed to create actor. Cause: Actor panicked while starting")
-            }
-            Self::System => f.write_str("Failed to create actor. Cause: System failure"),
-            Self::InvalidName(ref name) => f.write_str(&format!(
-                "Failed to create actor. Cause: Invalid actor name ({})",
-                name
-            )),
-            Self::AlreadyExists(ref path) => f.write_str(&format!(
-                "Failed to create actor. Cause: An actor at the same path already exists ({})",
-                path
-            )),
-        }
-    }
 }
 
 impl From<InvalidName> for CreateError {
@@ -113,19 +95,9 @@ impl From<InvalidName> for CreateError {
 }
 
 /// Error type when an actor fails to restart.
+#[derive(Debug, Error)]
+#[error("Failed to restart actor. Cause: Actor panicked while starting")]
 pub struct RestartError;
-
-impl fmt::Display for RestartError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str("Failed to restart actor. Cause: Actor panicked while starting")
-    }
-}
-
-impl fmt::Debug for RestartError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(&self.to_string())
-    }
-}
 
 #[async_trait::async_trait]
 impl<A: Actor + ?Sized> Actor for Box<A> {
