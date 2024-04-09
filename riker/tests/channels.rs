@@ -223,8 +223,8 @@ impl Receive<SomeMessage> for DumbActor {
 
 // We must wrap SystemEvent in a type defined in this test crate
 // so we can implement traits on it
-#[derive(Clone, Debug)]
-struct SysEvent(SystemEvent);
+// #[derive(Clone, Debug)]
+// struct SysEvent(SystemEvent);
 
 // *** Event stream test ***
 #[actor(TestProbe, SystemEvent)]

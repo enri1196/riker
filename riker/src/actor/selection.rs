@@ -77,7 +77,6 @@ impl ActorSelection {
     where
         Msg: Message,
     {
-        #[async_recursion::async_recursion]
         async fn walk<'a, I, Msg>(
             anchor: &BasicActorRef,
             // dl: &BasicActorRef,
@@ -141,7 +140,6 @@ impl ActorSelection {
     }
 
     pub async fn sys_tell(&self, msg: SystemMsg, sender: impl Into<Option<BasicActorRef>>) {
-        #[async_recursion::async_recursion]
         async fn walk<'a, I>(
             anchor: &BasicActorRef,
             // dl: &BasicActorRef,

@@ -9,14 +9,15 @@ repository = "https://github.com/riker-rs/riker"
 license = "MIT"
 readme = "README.md"
 keywords = ["actors", "actor-model", "async", "cqrs", "event_sourcing"]
+rust-version = "1.77.1"
 
 [badges]
 travis-ci = { repository = "riker-rs/riker" }
 
 [dependencies]
 riker-macros = { path = "../riker-macros" }
-tokio = { version = "1.36.0", features = ["full"] }
-chrono = "0.4.35"
+tokio = { version = "1.37.0", features = ["full"] }
+chrono = "0.4.37"
 config = "0.14.0"
 futures = { version = "0.3.30", features = ["thread-pool"] }
 rand = "0.8.5"
@@ -25,12 +26,10 @@ uuid = { version = "1.8.0", features = ["v4"] }
 pin-utils = "0.1.0"
 tracing = "0.1.40"
 async-trait = "0.1.79"
-async-recursion = "1.1.0"
 thiserror = "1.0.58"
-
 num_cpus = "1.16.0"
 dashmap = "5.5.3"
-serde_json = { version = "1.0.114", optional = true }
+serde_json = { version = "1.0.115", optional = true }
 
 [dev-dependencies]
 riker-testkit = { path = "../riker-testkit" }
