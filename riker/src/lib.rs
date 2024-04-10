@@ -1,15 +1,7 @@
-#![crate_name = "riker"]
-#![deny(clippy::all)]
-// #![deny(clippy::pedantic)]
-// #![deny(clippy::nursery)]
-#![allow(clippy::new_ret_no_self)]
-#![allow(clippy::large_enum_variant)]
-
-mod validate;
-
 pub mod actor;
 pub mod ask;
 pub mod kernel;
+pub mod validate;
 pub mod system;
 
 use std::any::Any;

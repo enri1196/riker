@@ -3,7 +3,8 @@ pub(crate) mod timer;
 
 use core::future::Future;
 use std::{
-    sync::Arc, fmt,
+    fmt,
+    sync::Arc,
     time::{Duration, Instant},
 };
 use thiserror::Error;
@@ -708,12 +709,12 @@ impl Run for ActorSystem {
 
 impl fmt::Debug for ActorSystem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let name = self.name();
+        let start_date = self.start_date();
+        let uptime = self.uptime();
         write!(
             f,
-            "ActorSystem[Name: {}, Start Time: {}, Uptime: {} seconds]",
-            self.name(),
-            self.start_date(),
-            self.uptime()
+            "ActorSystem[Name: {name}, Start Time: {start_date}, Uptime: {uptime} seconds]"
         )
     }
 }
