@@ -99,8 +99,7 @@ struct AskActor<Msg> {
 
 impl<Msg: Message> AskActor<Msg> {
     fn new(tx: Arc<Mutex<Option<ChannelSender<Msg>>>>) -> BoxActor<Msg> {
-        let ask = AskActor { tx };
-        Box::new(ask)
+        Box::new(AskActor { tx })
     }
 }
 

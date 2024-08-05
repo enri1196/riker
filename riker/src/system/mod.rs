@@ -51,9 +51,9 @@ pub enum SystemCmd {
     Restart,
 }
 
-impl Into<SystemMsg> for SystemCmd {
-    fn into(self) -> SystemMsg {
-        SystemMsg::Command(self)
+impl From<SystemCmd> for SystemMsg {
+    fn from(val: SystemCmd) -> Self {
+        SystemMsg::Command(val)
     }
 }
 
@@ -69,9 +69,9 @@ pub enum SystemEvent {
     ActorTerminated(ActorTerminated),
 }
 
-impl Into<SystemMsg> for SystemEvent {
-    fn into(self) -> SystemMsg {
-        SystemMsg::Event(self)
+impl From<SystemEvent> for SystemMsg {
+    fn from(val: SystemEvent) -> Self {
+        SystemMsg::Event(val)
     }
 }
 
@@ -90,39 +90,39 @@ pub struct ActorTerminated {
     pub actor: BasicActorRef,
 }
 
-impl Into<SystemEvent> for ActorCreated {
-    fn into(self) -> SystemEvent {
-        SystemEvent::ActorCreated(self)
+impl From<ActorCreated> for SystemEvent {
+    fn from(val: ActorCreated) -> Self {
+        SystemEvent::ActorCreated(val)
     }
 }
 
-impl Into<SystemEvent> for ActorRestarted {
-    fn into(self) -> SystemEvent {
-        SystemEvent::ActorRestarted(self)
+impl From<ActorRestarted> for SystemEvent {
+    fn from(val: ActorRestarted) -> Self {
+        SystemEvent::ActorRestarted(val)
     }
 }
 
-impl Into<SystemEvent> for ActorTerminated {
-    fn into(self) -> SystemEvent {
-        SystemEvent::ActorTerminated(self)
+impl From<ActorTerminated> for SystemEvent {
+    fn from(val: ActorTerminated) -> Self {
+        SystemEvent::ActorTerminated(val)
     }
 }
 
-impl Into<SystemMsg> for ActorCreated {
-    fn into(self) -> SystemMsg {
-        SystemMsg::Event(SystemEvent::ActorCreated(self))
+impl From<ActorCreated> for SystemMsg {
+    fn from(val: ActorCreated) -> Self {
+        SystemMsg::Event(SystemEvent::ActorCreated(val))
     }
 }
 
-impl Into<SystemMsg> for ActorRestarted {
-    fn into(self) -> SystemMsg {
-        SystemMsg::Event(SystemEvent::ActorRestarted(self))
+impl From<ActorRestarted> for SystemMsg {
+    fn from(val: ActorRestarted) -> Self {
+        SystemMsg::Event(SystemEvent::ActorRestarted(val))
     }
 }
 
-impl Into<SystemMsg> for ActorTerminated {
-    fn into(self) -> SystemMsg {
-        SystemMsg::Event(SystemEvent::ActorTerminated(self))
+impl From<ActorTerminated> for SystemMsg {
+    fn from(val: ActorTerminated) -> Self {
+        SystemMsg::Event(SystemEvent::ActorTerminated(val))
     }
 }
 
@@ -352,7 +352,7 @@ impl ActorSystem {
         }
 
         let root = &self.sys_actors.as_ref().unwrap().root;
-        print_node(self, &root, "");
+        print_node(self, root, "");
     }
 
     #[cfg(feature = "serde")]
@@ -468,7 +468,7 @@ impl ActorSystem {
         A: Actor,
     {
         self.provider
-            .create_actor(props, name, &self.sys_root(), self)
+            .create_actor(props, name, self.sys_root(), self)
             .await
     }
 
@@ -480,7 +480,7 @@ impl ActorSystem {
         A: ActorFactory,
     {
         self.provider
-            .create_actor(Props::new::<A>(), name, &self.sys_root(), self)
+            .create_actor(Props::new::<A>(), name, self.sys_root(), self)
             .await
     }
 
@@ -494,7 +494,7 @@ impl ActorSystem {
         A: ActorFactoryArgs<Args>,
     {
         self.provider
-            .create_actor(Props::new_args::<A, _>(args), name, &self.sys_root(), self)
+            .create_actor(Props::new_args::<A, _>(args), name, self.sys_root(), self)
             .await
     }
 
@@ -531,7 +531,7 @@ impl ActorRefFactory for ActorSystem {
         A: Actor,
     {
         self.provider
-            .create_actor(props, name, &self.user_root(), self)
+            .create_actor(props, name, self.user_root(), self)
             .await
     }
 
@@ -540,7 +540,7 @@ impl ActorRefFactory for ActorSystem {
         A: ActorFactory,
     {
         self.provider
-            .create_actor(Props::new::<A>(), name, &self.user_root(), self)
+            .create_actor(Props::new::<A>(), name, self.user_root(), self)
             .await
     }
 
@@ -554,7 +554,7 @@ impl ActorRefFactory for ActorSystem {
         A: ActorFactoryArgs<Args>,
     {
         self.provider
-            .create_actor(Props::new_args::<A, _>(args), name, &self.user_root(), self)
+            .create_actor(Props::new_args::<A, _>(args), name, self.user_root(), self)
             .await
     }
 
@@ -574,7 +574,7 @@ impl ActorRefFactory for &ActorSystem {
         A: Actor,
     {
         self.provider
-            .create_actor(props, name, &self.user_root(), self)
+            .create_actor(props, name, self.user_root(), self)
             .await
     }
 
@@ -583,7 +583,7 @@ impl ActorRefFactory for &ActorSystem {
         A: ActorFactory,
     {
         self.provider
-            .create_actor(Props::new::<A>(), name, &self.user_root(), self)
+            .create_actor(Props::new::<A>(), name, self.user_root(), self)
             .await
     }
 
@@ -597,7 +597,7 @@ impl ActorRefFactory for &ActorSystem {
         A: ActorFactoryArgs<Args>,
     {
         self.provider
-            .create_actor(Props::new_args::<A, _>(args), name, &self.user_root(), self)
+            .create_actor(Props::new_args::<A, _>(args), name, self.user_root(), self)
             .await
     }
 
@@ -617,7 +617,7 @@ impl TmpActorRefFactory for ActorSystem {
     {
         let name = format!("{}", rand::random::<u64>());
         self.provider
-            .create_actor(props, &name, &self.temp_root(), self)
+            .create_actor(props, &name, self.temp_root(), self)
             .await
     }
 
@@ -627,7 +627,7 @@ impl TmpActorRefFactory for ActorSystem {
     {
         let name = format!("{}", rand::random::<u64>());
         self.provider
-            .create_actor(Props::new::<A>(), &name, &self.temp_root(), self)
+            .create_actor(Props::new::<A>(), &name, self.temp_root(), self)
             .await
     }
 
@@ -641,12 +641,7 @@ impl TmpActorRefFactory for ActorSystem {
     {
         let name = format!("{}", rand::random::<u64>());
         self.provider
-            .create_actor(
-                Props::new_args::<A, _>(args),
-                &name,
-                &self.temp_root(),
-                self,
-            )
+            .create_actor(Props::new_args::<A, _>(args), &name, self.temp_root(), self)
             .await
     }
 }
@@ -820,7 +815,7 @@ async fn sys_actor_of_props<A>(
 where
     A: Actor,
 {
-    prov.create_actor(props, name, &sys.sys_root(), sys)
+    prov.create_actor(props, name, sys.sys_root(), sys)
         .await
         .map_err(|_| SystemError::ModuleFailed(name.into()))
 }
@@ -833,7 +828,7 @@ async fn sys_actor_of<A>(
 where
     A: ActorFactory,
 {
-    prov.create_actor(Props::new::<A>(), name, &sys.sys_root(), sys)
+    prov.create_actor(Props::new::<A>(), name, sys.sys_root(), sys)
         .await
         .map_err(|_| SystemError::ModuleFailed(name.into()))
 }
@@ -848,7 +843,7 @@ where
     Args: ActorArgs,
     A: ActorFactoryArgs<Args>,
 {
-    prov.create_actor(Props::new_args::<A, _>(args), name, &sys.sys_root(), sys)
+    prov.create_actor(Props::new_args::<A, _>(args), name, sys.sys_root(), sys)
         .await
         .map_err(|_| SystemError::ModuleFailed(name.into()))
 }
@@ -946,10 +941,8 @@ impl Actor for ShutdownActor {
         msg: SystemMsg,
         sender: Option<BasicActorRef>,
     ) {
-        if let SystemMsg::Event(evt) = msg {
-            if let SystemEvent::ActorTerminated(terminated) = evt {
-                self.receive(ctx, terminated, sender).await;
-            }
+        if let SystemMsg::Event(SystemEvent::ActorTerminated(terminated)) = msg {
+            self.receive(ctx, terminated, sender).await;
         }
     }
 

@@ -41,8 +41,8 @@ pub mod channel {
         };
 
         let receiver = ChannelProbeReceive {
-            rx: rx,
-            tx: tx,
+            rx,
+            tx,
             timer_start: Utc::now(),
         };
 
@@ -71,7 +71,7 @@ pub mod channel {
         }
 
         fn payload(&self) -> &P {
-            &self.payload.as_ref().unwrap()
+            self.payload.as_ref().unwrap()
         }
     }
 

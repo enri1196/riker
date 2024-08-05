@@ -198,7 +198,7 @@ impl ActorCell {
     }
 
     pub async fn death_watch<A: Actor>(&self, terminated: &BasicActorRef, actor: &mut Option<A>) {
-        if self.is_child(&terminated) {
+        if self.is_child(terminated) {
             self.remove_child(terminated);
 
             if !self.has_children() {
@@ -315,7 +315,7 @@ where
     }
 
     pub fn children(&self) -> &Children {
-        &self.cell.children()
+        self.cell.children()
     }
 
     pub fn user_root(&self) -> BasicActorRef {
@@ -334,7 +334,7 @@ where
         let mb = &self.mailbox;
         let k = self.cell.kernel();
 
-        match dispatch(msg, mb, k, &self.system()).await {
+        match dispatch(msg, mb, k, self.system()).await {
             Ok(_) => Ok(()),
             Err(e) => {
                 let dl = e.clone(); // clone the failed message and send to dead letters
@@ -650,16 +650,14 @@ where
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Children {
     actors: Arc<DashMap<String, BasicActorRef>>,
 }
 
 impl Children {
     pub fn new() -> Children {
-        Children {
-            actors: Arc::new(DashMap::new()),
-        }
+        Children::default()
     }
 
     pub fn add(&self, actor: BasicActorRef) {

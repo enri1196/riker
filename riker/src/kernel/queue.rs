@@ -32,7 +32,6 @@ impl<Msg: Message> QueueWriter<Msg> {
         self.tx
             .send(msg)
             .await
-            .map(|_| ())
             .map_err(|e| EnqueueError { msg: e.0 })
     }
 }

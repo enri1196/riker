@@ -69,13 +69,11 @@ where
         msg: SystemMsg,
         _send_out: Option<BasicActorRef>,
     ) {
-        if let SystemMsg::Event(evt) = msg {
-            if let SystemEvent::ActorTerminated(terminated) = evt {
-                let subs = self.subs.clone();
+        if let SystemMsg::Event(SystemEvent::ActorTerminated(terminated)) = msg {
+            let subs = self.subs.clone();
 
-                for topic in subs.keys() {
-                    unsubscribe(&mut self.subs, topic, &terminated.actor);
-                }
+            for topic in subs.keys() {
+                unsubscribe(&mut self.subs, topic, &terminated.actor);
             }
         }
     }
@@ -317,30 +315,30 @@ pub enum ChannelMsg<Msg: Message> {
 }
 
 // publish
-impl<Msg: Message> Into<ChannelMsg<Msg>> for Publish<Msg> {
-    fn into(self) -> ChannelMsg<Msg> {
-        ChannelMsg::Publish(self)
+impl<Msg: Message> From<Publish<Msg>> for ChannelMsg<Msg> {
+    fn from(val: Publish<Msg>) -> Self {
+        ChannelMsg::Publish(val)
     }
 }
 
 // subscribe
-impl<Msg: Message> Into<ChannelMsg<Msg>> for Subscribe<Msg> {
-    fn into(self) -> ChannelMsg<Msg> {
-        ChannelMsg::Subscribe(self)
+impl<Msg: Message> From<Subscribe<Msg>> for ChannelMsg<Msg> {
+    fn from(val: Subscribe<Msg>) -> Self {
+        ChannelMsg::Subscribe(val)
     }
 }
 
 // unsubscribe
-impl<Msg: Message> Into<ChannelMsg<Msg>> for Unsubscribe<Msg> {
-    fn into(self) -> ChannelMsg<Msg> {
-        ChannelMsg::Unsubscribe(self)
+impl<Msg: Message> From<Unsubscribe<Msg>> for ChannelMsg<Msg> {
+    fn from(val: Unsubscribe<Msg>) -> Self {
+        ChannelMsg::Unsubscribe(val)
     }
 }
 
 // unsubscribe
-impl<Msg: Message> Into<ChannelMsg<Msg>> for UnsubscribeAll<Msg> {
-    fn into(self) -> ChannelMsg<Msg> {
-        ChannelMsg::UnsubscribeAll(self)
+impl<Msg: Message> From<UnsubscribeAll<Msg>> for ChannelMsg<Msg> {
+    fn from(val: UnsubscribeAll<Msg>) -> Self {
+        ChannelMsg::UnsubscribeAll(val)
     }
 }
 

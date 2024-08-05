@@ -209,13 +209,13 @@ where
     let mut actor = dock.actor.lock().await.take();
     let cell = &mut dock.cell;
 
-    process_sys_msgs(&sen.mbox, &ctx, cell, &mut actor).await;
+    process_sys_msgs(sen.mbox, &ctx, cell, &mut actor).await;
 
     if actor.is_some() && !sen.mbox.is_suspended() {
-        process_msgs(&sen.mbox, &ctx, cell, &mut actor).await;
+        process_msgs(sen.mbox, &ctx, cell, &mut actor).await;
     }
 
-    process_sys_msgs(&sen.mbox, &ctx, cell, &mut actor).await;
+    process_sys_msgs(sen.mbox, &ctx, cell, &mut actor).await;
 
     if actor.is_some() {
         let mut a = dock.actor.lock().await;
@@ -226,7 +226,7 @@ where
 
     let has_msgs = sen.mbox.has_msgs().await || sen.mbox.has_sys_msgs().await;
     if has_msgs && !sen.mbox.is_scheduled() {
-        ctx.kernel.schedule(&ctx.system());
+        ctx.kernel.schedule(ctx.system());
     }
 }
 
@@ -245,7 +245,7 @@ async fn process_msgs<A>(
             Ok(msg) => {
                 let (msg, send_out) = (msg.msg, msg.send_out);
                 actor.as_mut().unwrap().recv(ctx, msg, send_out).await;
-                process_sys_msgs(&mbox, &ctx, cell, actor).await;
+                process_sys_msgs(mbox, ctx, cell, actor).await;
 
                 count += 1;
             }

@@ -56,7 +56,7 @@ where
     async fn tell(&self, msg: T, send_out: Option<BasicActorRef>) {
         let envelope = Envelope {
             msg: msg.into(),
-            send_out: send_out.into(),
+            send_out,
         };
         // consume the result (we don't return it to user)
         let _ = self.cell.send_msg(envelope).await;
@@ -173,7 +173,7 @@ impl<Msg: Message> ActorReference for &ActorRef<Msg> {
     }
 
     /// Iterator over children references.
-    fn children<'a>(&'a self) -> &Children {
+    fn children(&self) -> &Children {
         self.cell.children()
     }
 }
@@ -257,7 +257,7 @@ where
     }
 
     /// Iterator over children references.
-    fn children<'a>(&'a self) -> &Children {
+    fn children(&self) -> &Children {
         self.0.children()
     }
 }
@@ -403,7 +403,7 @@ impl ActorReference for BasicActorRef {
     }
 
     /// Iterator over children references.
-    fn children<'a>(&'a self) -> &Children {
+    fn children(&self) -> &Children {
         self.cell.children()
     }
 }
@@ -464,7 +464,7 @@ impl ActorReference for &BasicActorRef {
     }
 
     /// Iterator over children references.
-    fn children<'a>(&'a self) -> &Children {
+    fn children(&self) -> &Children {
         self.cell.children()
     }
 }

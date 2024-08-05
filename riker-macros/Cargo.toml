@@ -14,11 +14,11 @@ keywords = ["actors", "actor-model", "async", "cqrs", "event_sourcing"]
 proc-macro = true
 
 [dependencies]
-tokio = { version = "1.36.0", features = ["full"] }
-syn = { version ="2.0.48", features = ["parsing", "full", "extra-traits", "proc-macro"] }
-quote = "1.0.35"
-proc-macro2 = "1.0.78"
+tokio = { version = "1.39.2", features = ["full"] }
+syn = { version ="2.0.72", features = ["parsing", "full", "extra-traits", "proc-macro"] }
+quote = "1.0.36"
+proc-macro2 = "1.0.86"
+async-trait = "0.1.81"
 
 [dev-dependencies]
 riker = { path = "../riker" }
-async-trait = "0.1.77"
