@@ -70,7 +70,7 @@ impl<Msg: Message> Ask<Msg> for ActorRef<Msg> {
         self.system().run(async move {
             let (tx, rx) = channel::<Ret>();
             let tx = Arc::new(Mutex::new(Some(tx)));
-            let props = Props::new_from_args(Box::new(AskActor::new), tx);
+            let props = Props::new_from_args(AskActor::boxed_new, tx);
             let actor = sys.tmp_actor_of_props(props).await.unwrap();
             my_self.tell(msg, Some(actor.into())).await;
             rx.map(|r| r.unwrap()).await
@@ -85,7 +85,7 @@ impl<Msg: Message> Ask<Msg> for BasicActorRef {
         self.system().run(async move {
             let (tx, rx) = channel::<Ret>();
             let tx = Arc::new(Mutex::new(Some(tx)));
-            let props = Props::new_from_args(Box::new(AskActor::new), tx);
+            let props = Props::new_from_args(AskActor::boxed_new, tx);
             let actor = sys.tmp_actor_of_props(props).await.unwrap();
             my_self.try_tell(msg, Some(actor.into())).await.unwrap();
             rx.map(|r| r.unwrap()).await
@@ -98,7 +98,7 @@ struct AskActor<Msg> {
 }
 
 impl<Msg: Message> AskActor<Msg> {
-    fn new(tx: Arc<Mutex<Option<ChannelSender<Msg>>>>) -> BoxActor<Msg> {
+    fn boxed_new(tx: Arc<Mutex<Option<ChannelSender<Msg>>>>) -> BoxActor<Msg> {
         Box::new(AskActor { tx })
     }
 }
@@ -108,8 +108,8 @@ impl<Msg: Message> Actor for AskActor<Msg> {
     type Msg = Msg;
 
     async fn recv(&mut self, ctx: &Context<Msg>, msg: Msg, _: Option<BasicActorRef>) {
-        let mut tx = self.tx.lock().await;
-        tx.take().unwrap().send(msg).unwrap();
+        let mut lock_tx = self.tx.lock().await;
+        lock_tx.take().and_then(|tx| tx.send(msg).ok());
         ctx.stop(ctx.myself()).await;
     }
 }

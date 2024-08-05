@@ -142,7 +142,6 @@ impl ActorSelection {
     pub async fn sys_tell(&self, msg: SystemMsg, sender: impl Into<Option<BasicActorRef>>) {
         async fn walk<'a, I>(
             anchor: &BasicActorRef,
-            // dl: &BasicActorRef,
             mut path_vec: Peekable<I>,
             msg: SystemMsg,
             send_out: &Option<BasicActorRef>,
