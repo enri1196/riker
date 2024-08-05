@@ -157,7 +157,7 @@ impl ActorSelection {
                         let parent = anchor.parent();
                         parent.sys_tell(msg).await;
                     } else {
-                        walk(&anchor.parent(), path_vec, msg, send_out, path).await;
+                        Box::pin(walk(&anchor.parent(), path_vec, msg, send_out, path)).await;
                     }
                 }
                 Some(&Selection::AllChildren) => {
@@ -172,14 +172,14 @@ impl ActorSelection {
                             actor_ref.try_tell(msg, send_out.clone()).await.unwrap();
                         }
                     } else if path_vec.peek().is_some() && child.is_some() {
-                        walk(
+                        Box::pin(walk(
                             child.as_ref().unwrap(),
                             // dl,
                             path_vec,
                             msg,
                             send_out,
                             path,
-                        )
+                        ))
                         .await;
                     } else {
                         // todo send to deadletters?
@@ -189,14 +189,14 @@ impl ActorSelection {
             }
         }
 
-        walk(
+        Box::pin(walk(
             &self.anchor,
             // &self.dl,
             self.path_vec.iter().peekable(),
             msg,
             &sender.into(),
             &self.path,
-        )
+        ))
         .await;
     }
 }
