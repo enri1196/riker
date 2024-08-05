@@ -4,10 +4,9 @@ pub(crate) mod provider;
 pub(crate) mod queue;
 
 use crate::{actors::Run, system::ActorSystem};
-use std::{panic::AssertUnwindSafe, sync::Arc};
-use tokio::sync::Mutex;
-use tokio::sync::mpsc::channel;
 use futures::FutureExt;
+use std::{panic::AssertUnwindSafe, sync::Arc};
+use tokio::sync::{mpsc::channel, Mutex};
 use tracing::warn;
 
 use crate::{
