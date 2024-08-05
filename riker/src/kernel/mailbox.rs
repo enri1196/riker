@@ -322,10 +322,8 @@ async fn handle_evt<A>(
 ) where
     A: Actor,
 {
-    if actor.is_some() {
+    if let Some(actor) = actor {
         actor
-            .as_mut()
-            .unwrap()
             .sys_recv(ctx, SystemMsg::Event(evt.clone()), None)
             .await;
     }
