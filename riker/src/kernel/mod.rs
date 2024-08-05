@@ -4,19 +4,10 @@ pub(crate) mod provider;
 pub(crate) mod queue;
 
 use crate::{actors::Run, system::ActorSystem};
-
-#[derive(Debug)]
-pub enum KernelMsg {
-    TerminateActor,
-    RestartActor,
-    RunActor,
-    Sys(ActorSystem),
-}
 use std::{panic::AssertUnwindSafe, sync::Arc};
 use tokio::sync::Mutex;
-
-use futures::FutureExt;
 use tokio::sync::mpsc::channel;
+use futures::FutureExt;
 use tracing::warn;
 
 use crate::{
@@ -42,6 +33,14 @@ impl<A: Actor> Clone for Dock<A> {
             cell: self.cell.clone(),
         }
     }
+}
+
+#[derive(Debug)]
+pub enum KernelMsg {
+    TerminateActor,
+    RestartActor,
+    RunActor,
+    Sys(ActorSystem),
 }
 
 pub async fn kernel<A>(
