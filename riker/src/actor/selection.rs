@@ -73,20 +73,15 @@ impl ActorSelection {
         })
     }
 
-    pub async fn try_tell<Msg>(&self, msg: Msg, sender: impl Into<Option<BasicActorRef>>)
-    where
-        Msg: Message,
-    {
-        async fn walk<'a, I, Msg>(
+    pub async fn try_tell<Msg: Message>(&self, msg: Msg, sender: impl Into<Option<BasicActorRef>>) {
+        async fn walk<'a, I, Msg: Message>(
             anchor: &BasicActorRef,
-            // dl: &BasicActorRef,
             mut path_vec: Peekable<I>,
             msg: Msg,
             send_out: &Option<BasicActorRef>,
             path: &str,
         ) where
             I: Iterator<Item = &'a Selection> + Send,
-            Msg: Message,
         {
             let seg = path_vec.next();
 
@@ -106,22 +101,16 @@ impl ActorSelection {
                 }
                 Some(Selection::ChildName(name)) => {
                     let child = anchor.children().iter().filter(|c| c.name() == name).last();
-                    if path_vec.peek().is_none() {
-                        if let Some(actor_ref) = child {
-                            actor_ref.try_tell(msg, send_out.clone()).await.unwrap();
-                        }
-                    } else if path_vec.peek().is_some() && child.is_some() {
-                        Box::pin(walk(
-                            child.as_ref().unwrap(),
-                            // dl,
-                            path_vec,
-                            msg,
-                            send_out,
-                            path,
-                        ))
-                        .await;
+                    if path_vec.peek().is_none()
+                        && let Some(ref child) = child
+                    {
+                        child.try_tell(msg, send_out.clone()).await.unwrap();
+                    } else if path_vec.peek().is_some()
+                        && let Some(ref child) = child
+                    {
+                        Box::pin(walk(child, path_vec, msg, send_out, path)).await;
                     } else {
-                        // todo send to deadletters?
+                        // TODO: send to deadletters?
                     }
                 }
                 None => {}
@@ -167,22 +156,16 @@ impl ActorSelection {
                 }
                 Some(Selection::ChildName(name)) => {
                     let child = anchor.children().iter().filter(|c| c.name() == name).last();
-                    if path_vec.peek().is_none() {
-                        if let Some(actor_ref) = child {
-                            actor_ref.try_tell(msg, send_out.clone()).await.unwrap();
-                        }
-                    } else if path_vec.peek().is_some() && child.is_some() {
-                        Box::pin(walk(
-                            child.as_ref().unwrap(),
-                            // dl,
-                            path_vec,
-                            msg,
-                            send_out,
-                            path,
-                        ))
-                        .await;
+                    if path_vec.peek().is_none()
+                        && let Some(ref child) = child
+                    {
+                        child.try_tell(msg, send_out.clone()).await.unwrap();
+                    } else if path_vec.peek().is_some()
+                        && let Some(ref child) = child
+                    {
+                        Box::pin(walk(child, path_vec, msg, send_out, path)).await;
                     } else {
-                        // todo send to deadletters?
+                        // TODO: send to deadletters?
                     }
                 }
                 None => {}

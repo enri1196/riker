@@ -1,3 +1,5 @@
+#![feature(let_chains)]
+
 pub mod actor;
 pub mod ask;
 pub mod kernel;
