@@ -1,4 +1,5 @@
 use regex::Regex;
+use thiserror::Error;
 use std::fmt;
 
 pub fn validate_name(name: &str) -> Result<(), InvalidName> {
@@ -10,17 +11,10 @@ pub fn validate_name(name: &str) -> Result<(), InvalidName> {
     }
 }
 
+#[derive(Clone, Error)]
+#[error("InvalidName [{name}] Must contain only a-Z, 0-9, _, or -")]
 pub struct InvalidName {
     pub name: String,
-}
-
-impl fmt::Display for InvalidName {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(&format!(
-            "\"{}\". Invalid name. Must contain only a-Z, 0-9, _, or -",
-            self.name
-        ))
-    }
 }
 
 impl fmt::Debug for InvalidName {
@@ -38,17 +32,10 @@ pub fn validate_path(path: &str) -> Result<(), InvalidPath> {
     }
 }
 
+#[derive(Clone, Error)]
+#[error("InvalidPath [{path}] Must contain only a-Z, 0-9, /, _, .., - or *")]
 pub struct InvalidPath {
     path: String,
-}
-
-impl fmt::Display for InvalidPath {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(&format!(
-            "\"{}\". Invalid path. Must contain only a-Z, 0-9, /, _, .., - or *",
-            self.path
-        ))
-    }
 }
 
 impl fmt::Debug for InvalidPath {

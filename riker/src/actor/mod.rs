@@ -76,22 +76,16 @@ impl<T> fmt::Debug for TryMsgError<T> {
 }
 
 /// Error type when an actor fails to start during `actor_of`.
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum CreateError {
     #[error("Failed to create actor. Cause: Actor panicked while starting")]
     Panicked,
     #[error("Failed to create actor. Cause: System failure")]
     System,
     #[error("Failed to create actor. Cause: Invalid actor name ({0})")]
-    InvalidName(String),
+    InvalidName(#[from] InvalidName),
     #[error("Failed to create actor. Cause: An actor at the same path already exists ({0})")]
     AlreadyExists(ActorPath),
-}
-
-impl From<InvalidName> for CreateError {
-    fn from(err: InvalidName) -> CreateError {
-        CreateError::InvalidName(err.name)
-    }
 }
 
 /// Error type when an actor fails to restart.
