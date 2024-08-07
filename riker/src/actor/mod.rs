@@ -19,7 +19,7 @@ pub use self::{
     actor_ref::{ActorRef, BasicActorRef, BoxedTell},
     actor_traits::*,
     channel::{
-        channel, All, Channel, ChannelMsg, ChannelRef, DLChannelMsg, DeadLetter, EventsChannel,
+        All, Channel, ChannelMsg, ChannelRef, DLChannelMsg, DeadLetter, EventsChannel,
         Publish, Subscribe, SysTopic, Topic, Unsubscribe, UnsubscribeAll,
     },
     macros::actor,

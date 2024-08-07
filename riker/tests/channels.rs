@@ -89,7 +89,7 @@ async fn channel_publish() {
     let sys = ActorSystem::new().await.unwrap();
 
     // Create the channel we'll be using
-    let chan: ChannelRef<SomeMessage> = channel("my-chan", &sys).await.unwrap();
+    let chan: ChannelRef<SomeMessage> = Channel::new("my-chan", &sys).await.unwrap();
 
     // The topic we'll be publishing to. Endow our subscriber test actor with this.
     // On Subscriber's pre_start it will subscribe to this channel+topic
@@ -123,7 +123,7 @@ async fn channel_publish_subscribe_all() {
     let sys = ActorSystem::new().await.unwrap();
 
     // Create the channel we'll be using
-    let chan: ChannelRef<SomeMessage> = channel("my-chan", &sys).await.unwrap();
+    let chan: ChannelRef<SomeMessage> = Channel::new("my-chan", &sys).await.unwrap();
 
     // The '*' All topic. Endow our subscriber test actor with this.
     // On Subscriber's pre_start it will subscribe to all topics on this channel.

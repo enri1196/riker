@@ -109,7 +109,7 @@ impl Receive<PowerStatus> for NavigationActor {
 #[tokio::main]
 async fn main() {
     let sys = ActorSystem::new().await.unwrap();
-    let chan: ChannelRef<PowerStatus> = channel("power-status", &sys).await.unwrap();
+    let chan: ChannelRef<PowerStatus> = Channel::new("power-status", &sys).await.unwrap();
 
     sys.actor_of_args::<GpsActor, _>("gps-actor", chan.clone())
         .await
