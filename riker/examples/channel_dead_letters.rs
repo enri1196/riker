@@ -1,4 +1,3 @@
-extern crate riker;
 use riker::actors::*;
 
 use std::{sync::Arc, time::Duration};
@@ -94,10 +93,10 @@ async fn main() {
 
     tokio::time::sleep(Duration::from_millis(500)).await;
 
-    println!("Creating dump actor");
+    println!("Creating dumb actor");
     let dumb = sys.actor_of::<DumbActor>("dumb-actor").await.unwrap();
 
-    println!("Stopping dump actor");
+    println!("Stopping dumb actor");
     sys.stop(&dumb).await;
     tokio::time::sleep(Duration::from_millis(500)).await;
 

@@ -1,5 +1,4 @@
-extern crate riker;
-use riker::{actors::*, ask::Ask};
+use riker::actors::*;
 
 #[derive(Clone, Debug)]
 pub struct Panic;

@@ -1,4 +1,3 @@
-extern crate riker;
 use riker::{actors::*, system::SystemCmd};
 
 use std::time::Duration;
