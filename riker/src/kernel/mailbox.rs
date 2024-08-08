@@ -2,6 +2,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 
+use thiserror::Error;
+
 use crate::{
     actor::actor_cell::ExtendedCell,
     actor::*,
@@ -20,7 +22,8 @@ pub trait MailboxSchedule {
     fn is_scheduled(&self) -> bool;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, Error)]
+#[error("AnyEnqueueError")]
 pub struct AnyEnqueueError;
 
 impl From<()> for AnyEnqueueError {

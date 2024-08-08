@@ -112,4 +112,5 @@ pub mod actors {
         ActorSystem, Run, ScheduleId, SystemBuilder, SystemEvent, SystemMsg, Timer,
     };
     pub use crate::{AnyMessage, Message};
+    pub use crate::kernel::mailbox::AnyEnqueueError;
 }
