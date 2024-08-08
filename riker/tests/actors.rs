@@ -73,15 +73,15 @@ async fn actor_create() {
             // test Display
             assert_eq!(
                 e.to_string(),
-                "Failed to create actor. Cause: Invalid actor name (/)"
+                "Failed to create actor. Cause: Invalid actor name (InvalidName [/] Must contain only a-Z, 0-9, _, or -)"
             );
             assert_eq!(
                 format!("{}", e),
-                "Failed to create actor. Cause: Invalid actor name (/)"
+                "Failed to create actor. Cause: Invalid actor name (InvalidName [/] Must contain only a-Z, 0-9, _, or -)"
             );
             // test Debug
-            assert_eq!(format!("{:?}", e), "InvalidName(\"/\")");
-            assert_eq!(format!("{:#?}", e), "InvalidName(\n    \"/\",\n)");
+            assert_eq!(format!("{:?}", e), "InvalidName(InvalidName [/] Must contain only a-Z, 0-9, _, or -)");
+            assert_eq!(format!("{:#?}", e), "InvalidName(\n    InvalidName [/] Must contain only a-Z, 0-9, _, or -,\n)");
         }
     }
     assert!(sys.actor_of::<Counter>("*").await.is_err());
