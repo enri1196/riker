@@ -32,10 +32,9 @@ impl<Msg: Message> Channel<Msg> {
     pub async fn new(
         name: &str,
         fact: &impl ActorRefFactory,
-    ) -> Result<ChannelRef<Msg>, CreateError>
-    {
+    ) -> Result<ChannelRef<Msg>, CreateError> {
         fact.actor_of::<Channel<Msg>>(name).await
-    }    
+    }
 }
 
 impl<Msg: Message> Default for Channel<Msg> {

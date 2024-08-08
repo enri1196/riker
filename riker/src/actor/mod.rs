@@ -19,8 +19,8 @@ pub use self::{
     actor_ref::{ActorRef, BasicActorRef, BoxedTell},
     actor_traits::*,
     channel::{
-        All, Channel, ChannelMsg, ChannelRef, DLChannelMsg, DeadLetter, EventsChannel,
-        Publish, Subscribe, SysTopic, Topic, Unsubscribe, UnsubscribeAll,
+        All, Channel, ChannelMsg, ChannelRef, DLChannelMsg, DeadLetter, EventsChannel, Publish,
+        Subscribe, SysTopic, Topic, Unsubscribe, UnsubscribeAll,
     },
     macros::actor,
     props::{ActorArgs, ActorFactory, ActorFactoryArgs, ActorProducer, BoxActorProd, Props},

@@ -60,20 +60,19 @@ impl<Msg: Message> QueueReader<Msg> {
         if let Some(item) = inner.next_item.take() {
             Ok(item)
         } else {
-            inner.rx.try_recv().map_err(|_| QueueEmpty)
+            inner.rx.recv().await.ok_or(QueueEmpty)
         }
     }
 
     pub async fn has_msgs(&self) -> bool {
         let mut inner = self.inner.lock().await;
         inner.next_item.is_some() || {
-            match inner.rx.try_recv() {
-                Ok(item) => {
+            inner.rx.recv().await
+                .map(|item| {
                     inner.next_item = Some(item);
                     true
-                }
-                Err(_) => false,
-            }
+                })
+                .unwrap_or_default()
         }
     }
 }
