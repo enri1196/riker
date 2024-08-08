@@ -1,6 +1,6 @@
 use regex::Regex;
-use std::fmt;
 use thiserror::Error;
+use std::fmt;
 
 pub fn validate_name(name: &str) -> Result<(), InvalidName> {
     let rgx = Regex::new(r"^[a-zA-Z0-9_-]+$").unwrap();
