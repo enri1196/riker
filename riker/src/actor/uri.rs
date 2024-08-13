@@ -12,6 +12,12 @@ impl ActorPath {
     }
 }
 
+impl AsRef<str> for ActorPath {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
 impl PartialEq for ActorPath {
     fn eq(&self, other: &ActorPath) -> bool {
         self.0 == other.0
